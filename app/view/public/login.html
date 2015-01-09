@@ -1,0 +1,29 @@
+<app sy-siteName="Login">
+    <div class="fs-form-wrap" id="fs-form-wrap">
+        <div class="fs-title">
+            <h1>Sign In</h1>
+        </div>
+        <form autocomplete="off" class="fs-form fs-form-full">
+			<!-- Autofill fix -->
+			<input style="display:none" type="text"/>
+			<input style="display:none" type="password"/>
+			<!-- Autofill fix end -->
+            <ol class="fs-fields">
+                <li class="fs-current">
+                    <input class="fs-anim-lower" name="username" type="text" placeholder="Username.." required>
+					<br/><br/>
+                    <input class="fs-anim-lower" name="password" type="password" placeholder="Password.." required>
+                </li>
+            </ol>
+			<br/><br/>
+			<div class="button-container">
+				<div class="morph-button morph-button-modal morph-button-modal-2 morph-button-fixed">
+					<button type="button" sy-action="login" sy-action-values="username,password">Sign In</button>
+				</div>
+				<div class="morph-button morph-button-modal morph-button-modal-2 morph-button-fixed">
+					<button type="button" sy-load="public/register" sy-action-values="username,password">Create a new account</button>
+				</div>
+			</div>
+        </form>
+    </div>
+</app>

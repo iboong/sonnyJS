@@ -1,0 +1,27 @@
+<app sy-siteName="Settings">
+<div class="fs-form-wrap" id="fs-form-wrap">
+        <div class="fs-title">
+            <h1>Account Settings</h1>
+        </div>
+        <form autocomplete="off" class="fs-form fs-form-full">
+			<input style="display:none" type="text"/>
+			<input style="display:none" type="password"/>
+            <ol class="fs-fields">
+                <li class="fs-current">
+                    <input class="fs-anim-lower" name="cpassword" type="text" placeholder="Current Password.." required>
+					<br/><br/>
+                    <input class="fs-anim-lower" name="npassword" type="text" placeholder="New Password.." required>
+					<br/><br/>
+                    <input class="fs-anim-lower" name="npassword2" type="password" placeholder="Confirm New Password.." required>
+                </li>
+            </ol>
+			<br/><br/>
+			<div class="morph-button morph-button-modal morph-button-modal-2 morph-button-fixed">
+				<button type="button" sy-action="updateUserPassword" sy-action-values="cpassword,npassword,npassword2">Update Password</button>
+			</div>
+			<div class="morph-button morph-button-modal morph-button-modal-2 morph-button-fixed">
+				<button type="button" sy-load="private/home">Back</button>
+			</div>
+        </form>
+    </div>
+</app>
