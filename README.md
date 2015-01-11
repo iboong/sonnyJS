@@ -8,6 +8,6 @@ With sonnyJS you can easily create web based single page applications - At least
 
 ### Help
 
- * Configuration file lies in: app/config.js
- * Template folders lies in app/view/*
+ * Template folders lies in view/*
  * Server and database template are lying in the server folder
+ * Include sonny.js into your website header to load it

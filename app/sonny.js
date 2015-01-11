@@ -1,4 +1,18 @@
-var Core = {
+(function(root, factory) {
+
+  if (typeof define === 'function' && define.amd) {
+    define(['underscore', 'jquery', 'exports'], function(_, $, exports) {
+      root.SONNY = factory(root, exports, _, $);
+    });
+
+  //  Create me global
+  } else {
+    root.SONNY = factory(root, {}, root._, (root.jQuery || root.Zepto || root.ender || root.$));
+  }
+
+}(this, function(root, SONNY, _, $) {
+
+SONNY = {
     version: "0.1.0",
     functions: {},
     pages: {},
@@ -10,17 +24,168 @@ var Core = {
 	fullscreen: false
 }
 
-// Hurry up, we're dreaming
-Core.functions = {
+SONNY.Settings = {
+    Pages: {},
+    PagePath: "view/",
+	loadFileType: ".html",
+	startPage: "public/login.html",
+	showVersion: false,
+	Server: true,
+	port: 9005,
+	preloadImages: true,
+	PreloadAnimation: true,
+	preloaderText: "",
+	fullscreenButton: true,
+	body: "#page"
+};
 
-	// Core version
+// Pages for guests
+SONNY.Settings.Pages.public = [
+    'public/login.html',
+	'public/register.html'
+];
+// Pages for logged in users
+SONNY.Settings.Pages.private = [
+    'private/home.html',
+    'private/settings.html'
+];
+
+SONNY.ressources = [
+	'app/lib/socket.io-1.2.1.js',
+	'app/lib/q.js',
+	'app/lib/notifications.js'
+];
+
+SONNY.loadRessources = function() {
+	if (SONNY.ressources.length) {
+		script = document.createElement("script");
+		script.addEventListener("load", function() {
+			SONNY.loadRessources();
+		});
+		script.src = SONNY.ressources.shift();
+		document.head.appendChild(script);
+	} else {
+		SONNY.init();
+	}
+}
+
+SONNY.init = function() {
+	SONNY.preloadAnimation.new();
+	SONNY.functions.createPageElement();
+    SONNY.pages = SONNY.Settings.Pages;
+    SONNY.width = window.innerWidth;
+    SONNY.height = window.innerHeight;
+    SONNY.mobile = SONNY.functions.detectMobileDevice();
+    SONNY.functions.preloadPages(SONNY.pages);
+    SONNY.functions.resize();
+    SONNY.functions.version();
+	SONNY.functions.sayHello();
+	SONNY.functions.fullscreenButton();
+};
+
+SONNY.Connection = {
+
+	socket: null,
+
+	connected: false,
+
+	// Will get increased
+	reconnectTimer: 500,
+
+	init: function() {
+
+		socket = io.connect(window.location.host + ':9005/');
+
+		socket.on('connect', function () {
+			SONNY.Connection.connected = true;
+			SONNY.Connection.reconnectTimer = 500;
+		});
+
+		// Deal with data received from the server
+        socket.on('message', function(event) {
+            var data = event;
+				try {
+					data = JSON.parse("[" + data + "]");
+				} catch (error) {
+					console.log("%cReceived a message of an incorrect form from the server:", "color : hsl(0, 100%, 40%)", data, error);
+					return;
+				};
+
+			// Server instructs to load a page
+			if (data[0][0] == "loadPage") {
+				SONNY.functions.renderPage(data[0][1]);
+			}
+
+			// Server instructs to alert something
+			if (data[0][0] == "alert") {
+				var notification = new NotificationFx({
+					message : data[0][1]
+				}).show();
+			}
+
+			// Log all received data
+			//console.info(data);
+        });
+
+		// When the connection closes
+        socket.on('disconnect', function() {
+			SONNY.Connection.connected = false;
+			SONNY.Connection.reconnectTimer = SONNY.Connection.reconnectTimer * 2;
+
+			var notification = new NotificationFx({
+					message : "Trying to reconnect in " + parseFloat(SONNY.Connection.reconnectTimer / 1000) + " seconds",
+				}).show();
+			
+			setTimeout( function() {
+				SONNY.Connection.Reconnect();
+			}, SONNY.Connection.reconnectTimer);
+		});
+
+	},
+
+	// Needs to be rewritten & rethinked
+	Reconnect: function() {
+		socket.connect();
+		socket.io.reconnect();
+	},
+
+};
+
+SONNY.preloadAnimation = {
+	
+	new: function() {
+		this.show();
+	},
+	
+	show: function() {
+		var fullscreenElement = document.createElement("div");
+			fullscreenElement.className = "heartbeat center";
+	
+		document.body.appendChild(fullscreenElement);
+	},
+	
+	hide: function() {
+		var Elements = document.querySelectorAll(".heartbeat");
+		for (ii in Elements) {
+			if (Elements[ii] instanceof Element) {
+				Elements[ii].parentNode.removeChild(Elements[ii]);
+			}
+		}
+	},
+
+};
+
+// Hurry up, we're dreaming
+SONNY.functions = {
+
+	// SONNY version
     version: function() {
-		if (!Settings.showVersion) return;
+		if (!SONNY.Settings.showVersion) return;
         var elVersion = document.createElement("div");
 			elVersion.style.position = 'absolute';
 			elVersion.style.right = '5px';
 			elVersion.style.bottom = '0px';
-			elVersion.innerHTML = "Version: " + Core.version;
+			elVersion.innerHTML = "Version: " + SONNY.version;
 
         document.body.appendChild(elVersion);
     },
@@ -29,7 +194,7 @@ Core.functions = {
 	sayHello: function() {
 		if ( navigator.userAgent.toLowerCase().indexOf('chrome') > -1 ) {
 			var args = [
-				'%c sonny.js ' + Core.version + ' ->%c http://www.sonnyjs.io/ ',
+				'%c sonny.js ' + SONNY.version + ' ->%c http://www.sonnyjs.io/ ',
 				'color: #d9d9d9; background: #000',
 				'background: #000'
 			];
@@ -61,8 +226,8 @@ Core.functions = {
     // Handle a window resize
     resize: function() {
         window.onresize = function() {
-            Core.width = window.innerWidth;
-            Core.height = window.innerHeight;
+            SONNY.width = window.innerWidth;
+            SONNY.height = window.innerHeight;
             // Iphone fix
             window.scrollTo(0, 0);
         }
@@ -71,24 +236,10 @@ Core.functions = {
 	// Create the page container
 	createPageElement: function() {
 		var el = document.createElement('pageContent');
-			if (Settings.body.match("#")) el.id = Settings.body.replace("#", "").trim();
-			else el.id = Settings.body;
+			if (SONNY.Settings.body.match("#")) el.id = SONNY.Settings.body.replace("#", "").trim();
+			else el.id = SONNY.Settings.body;
 		document.body.appendChild(el);
 	},
-
-    // Initialize the awesomeness
-    init: function() {
-		Core.functions.createPageElement();
-        Core.pages = Settings.Pages;
-        Core.width = window.innerWidth;
-        Core.height = window.innerHeight;
-        Core.mobile = this.detectMobileDevice();
-        Core.functions.preloadPages(Core.pages);
-        Core.functions.resize();
-        Core.functions.version();
-		Core.functions.sayHello();
-		Core.functions.fullscreenButton();
-    },
 
     // Preload all pages from the config.js
     preloadPages: function(data) {
@@ -110,17 +261,17 @@ Core.functions = {
                     hasLoaded(data[key]);
                 }
                 if (data[key] instanceof Object) {
-                    if (Settings.Pages[key]) {
+                    if (SONNY.Settings.Pages[key]) {
                         PageObject[key] = {};
                         load(data[key], key);
                     }
                 } else {
                     if (PageObject[index]) {
-                        Core.functions.AJAX(Settings.PagePath + data[key] + Core.functions.antiCache()).then(function(resp) {
+                        SONNY.functions.AJAX(SONNY.Settings.PagePath + data[key] + SONNY.functions.antiCache()).then(function(resp) {
 							
 							var htmlToDOM = document.implementation.createHTMLDocument("html");
 								htmlToDOM.documentElement.innerHTML = resp;
-								htmlToDOM = [Core.functions.compileHTML(htmlToDOM.body.children[0])];
+								htmlToDOM = [SONNY.functions.compileHTML(htmlToDOM.body.children[0])];
 
 							var compiledHTML = htmlToDOM[0];
 								compiledHTML.Content = htmlToDOM[0].inside;
@@ -139,14 +290,14 @@ Core.functions = {
         }
 
         function init(object) {
-            Core.pages = object;
-            Core.loaded = true;
+            SONNY.pages = object;
+            SONNY.loaded = true;
 			// Delayed to beautify it
 			setTimeout(function() {
-				if (Settings.Server) Connection.init();
-				preloadAnimation.hide();
+				if (SONNY.Settings.Server) SONNY.Connection.init();
+				SONNY.preloadAnimation.hide();
 				setTimeout(function() {
-					Core.functions.renderPage(Settings.startPage);
+					SONNY.functions.renderPage(SONNY.Settings.startPage);
 				}, 250);
 			}, 850);
             
@@ -158,7 +309,7 @@ Core.functions = {
 	// Render page from core object
     renderPage: function(data) {
 
-        Core.currentPage = data;
+        SONNY.currentPage = data;
 
         var data = data.split("/");
 
@@ -167,22 +318,22 @@ Core.functions = {
         var serverData = [];
 
         function getPage(value, index) {
-            if (Core.pages[value]) {
-                getPage(Core.pages[value], value);
+            if (SONNY.pages[value]) {
+                getPage(SONNY.pages[value], value);
             } else {
                 var url = "";
                 if (value && index) {
                     Object.keys(data).forEach(function(key) {
-                        if (!data[key].match(Settings.loadFileType)) {
+                        if (!data[key].match(SONNY.Settings.loadFileType)) {
                             url += data[key] + "/";
-                            if (Core.pages[data[key]]) {
-                                page = Core.pages[data[key]];
+                            if (SONNY.pages[data[key]]) {
+                                page = SONNY.pages[data[key]];
                             }
                         } else {
                             url += data[key];
                             main = url;
 							if (!(page[main])) throw (": Page "+main+" does not exist! Please check your configuration file!");
-                            Core.functions.render(page[main]);
+                            SONNY.functions.render(page[main]);
                         }
                     });
                 }
@@ -198,7 +349,7 @@ Core.functions = {
     render: function(data) {
 	
         if (Boolean(data["sy-requireserver"])) {
-            Core.functions.searchForServerData(data).then(function(response) {
+            SONNY.functions.searchForServerData(data).then(function(response) {
                 createHTML(response);
             });
         } else {
@@ -209,7 +360,7 @@ Core.functions = {
 			
             var content = throwData(data.Content);
 
-            var body = document.querySelector(Settings.body);
+            var body = document.querySelector(SONNY.Settings.body);
 
 			// Clean
             body.innerHTML = "";
@@ -227,7 +378,7 @@ Core.functions = {
 			var elementsArray = [];
 			if (data instanceof Object) {
 				Object.keys(data).forEach( function(key) {
-					elementsArray.push(Core.functions.compileJSON(data[key])[0]);
+					elementsArray.push(SONNY.functions.compileJSON(data[key])[0]);
 				});
 			}
 			return elementsArray;
@@ -285,7 +436,7 @@ Core.functions = {
 		// Fetch data from server
         function getServerData(data) {
             var deferred = Q.defer();
-            socket.emit('message', Core.functions.stringifyMsg(["getUserData", data]), function(responseData) {
+            socket.emit('message', SONNY.functions.stringifyMsg(["getUserData", data]), function(responseData) {
 				deferred.resolve(responseData);
             });
             return deferred.promise;
@@ -304,7 +455,7 @@ Core.functions = {
                     if (!(data[key] instanceof Object)) {
                         if (data[key].match("%(.*)%")) {
 							if (!(data.backup)) {
-								var original = Core.functions.clone(data);
+								var original = SONNY.functions.clone(data);
 								// Hold it fresh
 								if (original.inside) {
 									delete original.inside;
@@ -370,7 +521,7 @@ Core.functions = {
 				if (ii === "inside") {
 					if (data.inside instanceof Object) {
 						Object.keys(data.inside).forEach(function(key) {
-							var insideElements = Core.functions.compileJSON(data.inside[key]);
+							var insideElements = SONNY.functions.compileJSON(data.inside[key]);
 							element.appendChild(insideElements[0]);
 						});
 					}
@@ -387,7 +538,7 @@ Core.functions = {
 
         });
 
-		element = Core.functions.specialAttributes(element);
+		element = SONNY.functions.specialAttributes(element);
 
         elementsArray.push(element);
 
@@ -416,7 +567,7 @@ Core.functions = {
 
             while (child) {
                 if (child.nodeType === 1 && child.nodeName != 'SCRIPT') {
-                    jsonobj.inside.push(Core.functions.compileHTML(child));
+                    jsonobj.inside.push(SONNY.functions.compileHTML(child));
                 }
                 child = child.nextSibling;
             }
@@ -447,19 +598,19 @@ Core.functions = {
 			if (loadAttr.match(":")) {
 				loadAttr = loadAttr.split(":");
 				element.addEventListener(loadAttr[0], function() {
-					Core.functions.renderPage(loadAttr[1] + Settings.loadFileType);
+					SONNY.functions.renderPage(loadAttr[1] + SONNY.Settings.loadFileType);
 				});
 			} else {
 				element.addEventListener('click', function() {
-					Core.functions.renderPage(element.attributes["sy-load"].value + Settings.loadFileType);
+					SONNY.functions.renderPage(element.attributes["sy-load"].value + SONNY.Settings.loadFileType);
 				});
 			}
 		}
 		// Some action for the server
 		if (element.attributes["sy-action"]) {
 			element.addEventListener("click", function() {
-				if (element.attributes["sy-action-values"]) Core.functions.processAction(element.attributes["sy-action"].value, element.attributes["sy-action-values"].value);
-				else Core.functions.processAction(element.attributes["sy-action"].value);
+				if (element.attributes["sy-action-values"]) SONNY.functions.processAction(element.attributes["sy-action"].value, element.attributes["sy-action-values"].value);
+				else SONNY.functions.processAction(element.attributes["sy-action"].value);
 			});
 		}
 		// Preload images
@@ -501,8 +652,8 @@ Core.functions = {
 								passedData.push(element.value);
 								if (passedData.length === resultArray.length) {
 									if (passedData && passedData.length) {			
-										socket.emit('message', Core.functions.stringifyMsg(["userAction", action, passedData]), function(responseData){
-											Core.functions.renderPage(responseData);
+										socket.emit('message', SONNY.functions.stringifyMsg(["userAction", action, passedData]), function(responseData){
+											SONNY.functions.renderPage(responseData);
 										});
 									}
 								}
@@ -518,8 +669,8 @@ Core.functions = {
 				}
 			});
         } else {
-			socket.emit('message', Core.functions.stringifyMsg(["userAction", action]), function(responseData){
-				Core.functions.renderPage(responseData);
+			socket.emit('message', SONNY.functions.stringifyMsg(["userAction", action]), function(responseData){
+				SONNY.functions.renderPage(responseData);
 			});
 		}
 	},
@@ -567,7 +718,7 @@ Core.functions = {
 			var l = x.length;
 			var y = new Array(l);
 			for (var i = 0; i < l; ++i) {
-				y[i] = Core.functions.clone(x[i]);
+				y[i] = SONNY.functions.clone(x[i]);
 			}
 			return y;
 		}
@@ -577,7 +728,7 @@ Core.functions = {
 			var y = {};
 			for (var k, i = 0, l = keys.length; i < l; ++i) {
 				k = keys[i];
-				y[k] = Core.functions.clone(x[k]);
+				y[k] = SONNY.functions.clone(x[k]);
 			}
 		 
 			return y;
@@ -643,10 +794,10 @@ Core.functions = {
 	},
 	
 	fullscreenButton: function() {
-		if (Settings.fullscreenButton) {
+		if (SONNY.Settings.fullscreenButton) {
 			var fullscreenButton = document.querySelector(".fullscreenToggle");
 			fullscreenButton.addEventListener('click', function() {
-				Core.functions.toggleFullScreen(function(bool) {
+				SONNY.functions.toggleFullScreen(function(bool) {
 					fullscreenButton.src = bool ? "assets/img/exitfullscreen.png" : "assets/img/gofullscreen.png";
 				});
 			});
@@ -666,7 +817,7 @@ Core.functions = {
 	        } else if (document.documentElement.webkitRequestFullscreen) {
 	            document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
 	        }
-			Core.fullscreen = true;
+			SONNY.fullscreen = true;
 			fn(true);
 	    } else {
 	        if (document.exitFullscreen) {
@@ -678,9 +829,17 @@ Core.functions = {
 	        } else if (document.webkitExitFullscreen) {
 	            document.webkitExitFullscreen();
 	        }
-			Core.fullscreen = false;
+			SONNY.fullscreen = false;
 			fn(false);
 	    }
 	}
 
-	}
+};	
+
+	if (!window.SONNY) {
+		window.addEventListener("DOMContentLoaded", SONNY.loadRessources());
+	} else throw ("Another instance of sonnyJS is already loaded!");
+
+	return SONNY;
+
+}));
