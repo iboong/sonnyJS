@@ -387,7 +387,7 @@ Core.functions = {
 
         });
 
-        Core.functions.addListener(element);
+		element = Core.functions.specialAttributes(element);
 
         elementsArray.push(element);
 
@@ -423,6 +423,105 @@ Core.functions = {
         }
 
         return jsonobj;
+	},
+	
+	// Check for special sonny attributes
+	specialAttributes: function(element) {
+		if (!element) throw ("Received invalid element");
+		// Min Max length property
+		if (element.attributes["sy-min-max"]) {
+			var minMax = element.attributes["sy-min-max"].value;
+				minMax = minMax.split(",");
+				for (ii in minMax) {
+					minMax[ii] = parseInt(minMax[ii]);
+				}
+			element.addEventListener('keypress', function(event) {
+				if (event.srcElement.value.length >= minMax[1]) {
+					if (event.keyCode !== 8) event.preventDefault();
+				}
+			});
+		}
+		// Load a page
+		if (element.attributes["sy-load"]) {
+			var loadAttr = element.attributes["sy-load"].value;
+			if (loadAttr.match(":")) {
+				loadAttr = loadAttr.split(":");
+				element.addEventListener(loadAttr[0], function() {
+					Core.functions.renderPage(loadAttr[1] + Settings.loadFileType);
+				});
+			} else {
+				element.addEventListener('click', function() {
+					Core.functions.renderPage(element.attributes["sy-load"].value + Settings.loadFileType);
+				});
+			}
+		}
+		// Some action for the server
+		if (element.attributes["sy-action"]) {
+			element.addEventListener("click", function() {
+				if (element.attributes["sy-action-values"]) Core.functions.processAction(element.attributes["sy-action"].value, element.attributes["sy-action-values"].value);
+				else Core.functions.processAction(element.attributes["sy-action"].value);
+			});
+		}
+		// Preload images
+		if (element.attributes["sy-image"]) {
+			element.style.display = "none";
+			var image = new Image();
+				image.src = element.attributes["sy-image"].value;
+				image.addEventListener("load", function() {
+					element.src = element.attributes["sy-image"].value;
+					element.style.display = "block";
+				}, false);
+		}
+		return element;
+	},
+	
+	// Handle the action and tell the server what to do
+	processAction: function(action, values) {
+        var resultArray = [],
+            passedData = [];
+
+        if (values && values.length) {
+            resultArray = values.split(",");
+			
+			Object.keys(resultArray).forEach(function(key) {
+				var element = document.querySelector("input[name=" + resultArray[key] + "]");
+				
+				if (element.attributes["sy-min-max"]) {
+					var minMax = element.attributes["sy-min-max"].value;
+						minMax = minMax.split(",");
+						for (ii in minMax) {
+							minMax[ii] = parseInt(minMax[ii]);
+						}
+						
+					if (minMax.length <= 1) throw ("sy-min-max requires 2 comma seperated integer values!");
+	
+					if (element.value && element.value !== "") {
+						if (element.value.length >= minMax[0]) {
+							if (element.value.length <= minMax[1]) {
+								passedData.push(element.value);
+								if (passedData.length === resultArray.length) {
+									if (passedData && passedData.length) {			
+										socket.emit('message', Core.functions.stringifyMsg(["userAction", action, passedData]), function(responseData){
+											Core.functions.renderPage(responseData);
+										});
+									}
+								}
+							} else {
+								new NotificationFx({message : "A maximum of "+minMax[1]+" characters are allowed!"}).show();
+								element.focus();
+							}
+						} else {
+							new NotificationFx({message : "At least "+minMax[0]+" characters are required!"}).show();
+							element.focus();
+						}
+					}
+				}
+			});
+        } else {
+			socket.emit('message', Core.functions.stringifyMsg(["userAction", action]), function(responseData){
+				Core.functions.renderPage(responseData);
+			});
+		}
 	},
 	
 	/*
@@ -512,62 +611,6 @@ Core.functions = {
         var data = (new Date()).getTime();
         return "?"+data;
     },
-	
-	// Add listener to element if needed
-	addListener: function(element) {
-		if (element && element !== undefined) {
-			// Load a page
-			if (element.attributes["sy-load"]) {
-				element.addEventListener("click", function() {
-					Core.functions.renderPage(element.attributes["sy-load"].value + Settings.loadFileType);
-				}, false);
-			}
-			// Some action for the server
-			if (element.attributes["sy-action"]) {
-				element.addEventListener("click", function() {
-					if (element.attributes["sy-action-values"]) Core.functions.processAction(element.attributes["sy-action"].value, element.attributes["sy-action-values"].value);
-					else Core.functions.processAction(element.attributes["sy-action"].value);
-				});
-			}
-			// Preload images
-			if (element.attributes["sy-image"]) {
-				element.style.display = "none";
-				var image = new Image();
-					image.src = element.attributes["sy-image"].value;
-					image.addEventListener("load", function() {
-						element.src = element.attributes["sy-image"].value;
-						element.style.display = "block";
-					}, false);
-			}
-		}
-    },
-	
-	// Handle the action and tell the server what to do
-	processAction: function(action, values) {
-        var resultArray = [],
-            passedData = [];
-
-        if (values && values.length) {
-            resultArray = values.split(",");
-			
-			Object.keys(resultArray).forEach(function(key) {
-				var elValues = document.querySelector("input[name=" + resultArray[key] + "]").value;
-				if (elValues && elValues !== "") {
-					passedData.push(elValues);
-				}
-			});
-
-			if (passedData && passedData.length) {			
-				socket.emit('message', Core.functions.stringifyMsg(["userAction", action, passedData]), function(responseData){
-					Core.functions.renderPage(responseData);
-				});
-			}
-        } else {
-			socket.emit('message', Core.functions.stringifyMsg(["userAction", action]), function(responseData){
-				Core.functions.renderPage(responseData);
-			});
-		}
-	},
 	
 	// Deferred xhr request
 	AJAX: function(url) {

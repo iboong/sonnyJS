@@ -34,10 +34,7 @@ var Connection = {
 			// Server instructs to alert something
 			if (data[0][0] == "alert") {
 				var notification = new NotificationFx({
-					message : data[0][1],
-					layout : 'attached',
-					effect : 'bouncyflip',
-					type : 'notice'
+					message : data[0][1]
 				}).show();
 			}
 
@@ -52,9 +49,6 @@ var Connection = {
 
 			var notification = new NotificationFx({
 					message : "Trying to reconnect in " + parseFloat(Connection.reconnectTimer / 1000) + " seconds",
-					layout : 'attached',
-					effect : 'bouncyflip',
-					type : 'notice'
 				}).show();
 			
 			setTimeout( function() {

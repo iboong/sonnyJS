@@ -135,16 +135,16 @@ if ( typeof define === 'function' && define.amd ) {
 		// the message
 		message : 'yo!',
 		// layout type: growl|attached|bar|other
-		layout : 'growl',
+		layout : 'attached',
 		// effects for the specified layout:
 		// for growl layout: scale|slide|genie|jelly
 		// for attached layout: flip|bouncyflip
 		// for other layout: boxspinner|cornerexpand|loadingcircle|thumbslider
 		// ...
-		effect : 'slide',
+		effect : 'bouncyflip',
 		// notice, warning, error, success
 		// will add class ns-type-warning, ns-type-error or ns-type-success
-		type : 'error',
+		type : 'notice',
 		// if the user doesn´t close the notification then we remove it 
 		// after the following time
 		ttl : 6000,
