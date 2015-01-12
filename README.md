@@ -69,9 +69,9 @@ SONNY.init(SonnyPages);
  ```<img sy-image="assets/img/example.png">```<br/><br/>
  
  
- ### Sonny functions
-  * ### SONNY.render
-  Render and display a specific already preloaded page.<br/>
+### Sonny functions
+ * ### SONNY.render
+ Render and display a specific already preloaded page.<br/>
   
-   <b>Usage:</b> <br/>
+ <b>Usage:</b> <br/>
  ```SONNY.render("public/login.html");```<br/>
