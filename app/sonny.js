@@ -1,13 +1,13 @@
 /**
  * sonnyJS v0.1.1
- * www.github.com/munitio/sonnyJS
+ * www.github.com/felixmaier/sonnyJS
  */
 (function(root, factory) {
 	root.SONNY = factory(root, {}, root._, (root.jQuery || root.$));
 }(this, function(root, SONNY, _, $) {
 
 SONNY = {
-    Version: "0.1.0",
+    Version: "0.1.1",
     Functions: {},
     CurrentPage: null,
     Loaded: false,
@@ -670,10 +670,19 @@ SONNY.Functions = {
 		}
 		// Some action for the server
 		if (element.attributes["sy-action"]) {
-			element.addEventListener("click", function() {
-				if (element.attributes["sy-action-values"]) SONNY.Functions.processAction(element.attributes["sy-action"].value, element.attributes["sy-action-values"].value);
-				else SONNY.Functions.processAction(element.attributes["sy-action"].value);
-			});
+			var loadAttr = element.attributes["sy-action"].value;
+			if (loadAttr.match(":")) {
+				loadAttr = loadAttr.split(":");
+				element.addEventListener(loadAttr[0], function() {
+					if (element.attributes["sy-action-values"]) SONNY.Functions.processAction(loadAttr[1], element.attributes["sy-action-values"].value);
+					else SONNY.Functions.processAction(loadAttr[1]);
+				});
+			} else {
+				element.addEventListener('click', function() {
+					if (element.attributes["sy-action-values"]) SONNY.Functions.processAction(element.attributes["sy-action"].value, element.attributes["sy-action-values"].value);
+					else SONNY.Functions.processAction(element.attributes["sy-action"].value);
+				});
+			}
 		}
 		// Preload images
 		if (element.attributes["sy-image"]) {
