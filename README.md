@@ -74,4 +74,4 @@ SONNY.init(SonnyPages);
  Render and display a specific already preloaded page.<br/>
   
    <b>Usage:</b> <br/>
-   ```SONNY.render("public/login.html");```<br/>
+ ```SONNY.render("public/login.html");```<br/><br/>
