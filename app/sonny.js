@@ -11,6 +11,7 @@ SONNY = {
     Functions: {},
     CurrentPage: null,
     Loaded: false,
+	Initialized: false,
     Width: null,
     Height: null,
     Mobile: false,
@@ -532,10 +533,13 @@ SONNY.init = function(data, ready) {
 		SONNY.sayHello();
 		SONNY.initializeFullScreenBtn();
 	} else {
-		if (data) {
-			SONNY.pages = data;
-			SONNY.loadRessources();
-		} else throw ("Sonny got no pages to load!");
+		if (!SONNY.Initialized) {
+			if (data) {
+				SONNY.pages = data;
+				SONNY.loadRessources();
+				SONNY.Initialized = true;
+			} else throw ("Sonny got no pages to load!");
+		} else throw ("Another Sonny instance is already running!");
 	}
 };
 
