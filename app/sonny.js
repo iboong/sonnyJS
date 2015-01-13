@@ -2,9 +2,9 @@
  * sonnyJS v0.1.1
  * www.github.com/felixmaier/sonnyJS
  */
-(function(root, factory) {
-	root.SONNY = factory(root, {}, root._, (root.jQuery || root.$));
-}(this, function(root, SONNY, _, $) {
+(function (root, factory) {
+    root.SONNY = factory(root, {}, root._);
+}(this, function(SONNY) {
 
 SONNY = {
     Version: "0.1.1",
@@ -80,10 +80,10 @@ SONNY = {
             SONNY.Height = window.innerHeight;
             // Iphone fix
             window.scrollTo(0, 0);
-        }
+        };
     },
 	
-	// Preload all pages from the config.js
+	// Preload all pages
     preloadPages: function(data) {
 	
 		if (data) SONNY.Pages = data;
@@ -112,7 +112,7 @@ SONNY = {
                     }
                 } else {
                     if (PageObject[index]) {
-                        SONNY.getJSON(SONNY.PagePath + data[key] + SONNY.antiCache()).then(function(resp) {
+                        SONNY.GET(SONNY.PagePath + data[key] + SONNY.antiCache()).then(function(resp) {
 							
 							var htmlToDOM = document.implementation.createHTMLDocument("html");
 								htmlToDOM.documentElement.innerHTML = resp;
@@ -128,7 +128,7 @@ SONNY = {
                             if (!loadedFiles.length) {
                                 init(PageObject);
                             }
-                        })
+                        });
                     }
                 }
             });
@@ -150,6 +150,8 @@ SONNY = {
 
         load(data);
     },
+	
+	// TODO: SONNY.loadPage({ }); Add a single page and callback after successfull load
 	
 	initializeFullScreenBtn: function() {
 		if (SONNY.FullScreenButton) {
@@ -199,11 +201,9 @@ SONNY = {
 
         SONNY.CurrentPage = data;
 
-        var data = data.split("/");
+        data = data.split("/");
 
         var page, main;
-
-        var serverData = [];
 
         function getPage(value, index) {
             if (SONNY.Pages[value]) {
@@ -292,13 +292,12 @@ SONNY = {
 			// TODO: Does not work properly on specific nodes yet
 			function textmatch(data) {
 				var deferred = Q.defer();
-				var matching = false;
 
 				var myValue,
 					output = [],
 					replace = [];
 
-				while ((myValue = rXuserData.exec(data)) != null)  {  
+				while ((myValue = rXuserData.exec(data)) !== null)  {  
 					output.push(myValue[1]);
 					replace.push(myValue[0]);
 				}
@@ -372,7 +371,7 @@ SONNY = {
 
 			function scanServerText(data) {
 				var deferred = Q.defer();
-				goDeep(data).then(function(result) {
+				goDeep(data).then(function() {
 					deferred.resolve(data);
 				});
 				return deferred.promise;
@@ -380,7 +379,7 @@ SONNY = {
 
 			function resolveChildren(parent) {
 				var deferred = Q.defer();
-				var result = Q.all([parent].map(function(data) {
+				Q.all([parent].map(function(data) {
 					scanServerText(data).then(function() {
 						deferred.resolve(data);
 					});
@@ -395,22 +394,15 @@ SONNY = {
 	
 	// Prevent browser from caching
 	antiCache: function() {
-        var data = (new Date()).getTime();
-        return "?"+data;
+        return "?" + (new Date()).getTime();
     },
 	
 	// Deferred xhr request
-	getJSON: function(url) {
+	GET: function(url) {
 	    var request = new XMLHttpRequest();
 	    var deferred = Q.defer();
  
-		request.open("GET", url, true);
-	    request.onload = onload;
-	    request.onerror = onerror;
-	    request.onprogress = onprogress;
-	    request.send();
-
-	    function onload() {
+		function onload() {
 	        if (request.status === 200) {
 	            deferred.resolve(request.responseText);
 	        } else {
@@ -425,7 +417,13 @@ SONNY = {
 	    function onprogress(event) {
 	        deferred.notify(event.loaded / event.total);
 	    }
-
+ 
+		request.open("GET", url, true);
+	    request.onload = onload;
+	    request.onerror = onerror;
+	    request.onprogress = onprogress;
+	    request.send();
+		
 	    return deferred.promise;
 	},
 	
@@ -433,26 +431,24 @@ SONNY = {
     compileJSON: function(data) {
         var element,
             elementsArray = [];
-
+			
         Object.keys(data).forEach(function(ii) {
             if (ii === "key") {
-                element = document.createElement(data["key"]);
-            } else if (ii === "class") {
-				element.className = data["class"];
-			} else if (ii === "text") {
-				element.innerHTML = data["text"];
+                element = document.createElement(data.key);
+            } else if (ii === "text") {
+				element.innerHTML = data.text;
 			} else {
 				if (ii === "inside") {
 					if (data.inside instanceof Object) {
-						Object.keys(data.inside).forEach(function(key) {
+						for (var key = 0; key < data.inside.length; ++key) {
 							var insideElements = SONNY.compileJSON(data.inside[key]);
 							element.appendChild(insideElements[0]);
-						});
+						}
 					}
 				} else {
 					try {
 						// Don't render backups
-						if (!(ii === "backup")) element.setAttribute(ii, data[ii]);
+						if (ii !== "backup") element.setAttribute(ii, data[ii]);
 					}
 					catch (e) {
 					   throw ("JSON rendering failed: " + e);
@@ -481,7 +477,7 @@ SONNY = {
         }
         if (object.hasChildNodes()) {
             var child = object.firstChild;
-            if (child.nodeType === 3 && child.data.trim() != '') {
+            if (child.nodeType === 3 && child.data.trim() !== '') {
                 jsonobj.text = child.data;
             }
 
@@ -490,7 +486,7 @@ SONNY = {
             }
 
             while (child) {
-                if (child.nodeType === 1 && child.nodeName != 'SCRIPT') {
+                if (child.nodeType === 1 && child.nodeName !== 'SCRIPT') {
                     jsonobj.inside.push(SONNY.compileHTML(child));
                 }
                 child = child.nextSibling;
@@ -509,7 +505,7 @@ SONNY.ressources = [
 
 SONNY.loadRessources = function() {
 	if (SONNY.ressources.length) {
-		script = document.createElement("script");
+		var script = document.createElement("script");
 		script.addEventListener("load", function() {
 			SONNY.loadRessources();
 		});
@@ -518,7 +514,7 @@ SONNY.loadRessources = function() {
 	} else {
 		SONNY.init("", true);
 	}
-}
+};
 
 SONNY.init = function(data, ready) {
 	if (ready) {
@@ -569,7 +565,7 @@ SONNY.Connection = {
 				} catch (error) {
 					console.log("%cReceived a message of an incorrect form from the server:", "color : hsl(0, 100%, 40%)", data, error);
 					return;
-				};
+				}
 
 			// Server instructs to load a page
 			if (data[0][0] == "loadPage") {
@@ -578,7 +574,7 @@ SONNY.Connection = {
 
 			// Server instructs to alert something
 			if (data[0][0] == "alert") {
-				var notification = new NotificationFx({
+				new NotificationFx({
 					message : data[0][1]
 				}).show();
 			}
@@ -592,7 +588,7 @@ SONNY.Connection = {
 			SONNY.Connection.connected = false;
 			SONNY.Connection.reconnectTimer = SONNY.Connection.reconnectTimer * 2;
 
-			var notification = new NotificationFx({
+				new NotificationFx({
 					message : "Trying to reconnect in " + parseFloat(SONNY.Connection.reconnectTimer / 1000) + " seconds",
 				}).show();
 			
@@ -607,7 +603,7 @@ SONNY.Connection = {
 	Reconnect: function() {
 		socket.connect();
 		socket.io.reconnect();
-	},
+	}
 
 };
 
@@ -626,12 +622,12 @@ SONNY.preloadAnimation = {
 	
 	hide: function() {
 		var Elements = document.querySelectorAll(".heartbeat");
-		for (ii in Elements) {
+		for (var ii = 0; ii < Elements.length; ++ii) {
 			if (Elements[ii] instanceof Element) {
 				Elements[ii].parentNode.removeChild(Elements[ii]);
 			}
 		}
-	},
+	}
 
 };
 
@@ -645,9 +641,10 @@ SONNY.Functions = {
 		if (element.attributes["sy-min-max"]) {
 			var minMax = element.attributes["sy-min-max"].value;
 				minMax = minMax.split(",");
-				for (ii in minMax) {
+				for (var ii = 0; ii < minMax.length; ++ii) {
 					minMax[ii] = parseInt(minMax[ii]);
 				}
+			if (minMax.length <= 1 || minMax.length > 2) throw ("sy-min-max requires 2 comma seperated integer values!");
 			element.addEventListener('keypress', function(event) {
 				if (event.srcElement.value.length >= minMax[1]) {
 					if (event.keyCode !== 8) event.preventDefault();
@@ -670,12 +667,12 @@ SONNY.Functions = {
 		}
 		// Some action for the server
 		if (element.attributes["sy-action"]) {
-			var loadAttr = element.attributes["sy-action"].value;
-			if (loadAttr.match(":")) {
-				loadAttr = loadAttr.split(":");
-				element.addEventListener(loadAttr[0], function() {
-					if (element.attributes["sy-action-values"]) SONNY.Functions.processAction(loadAttr[1], element.attributes["sy-action-values"].value);
-					else SONNY.Functions.processAction(loadAttr[1]);
+			var actionAttr = element.attributes["sy-action"].value;
+			if (actionAttr.match(":")) {
+				actionAttr = actionAttr.split(":");
+				element.addEventListener(actionAttr[0], function() {
+					if (element.attributes["sy-action-values"]) SONNY.Functions.processAction(actionAttr[1], element.attributes["sy-action-values"].value);
+					else SONNY.Functions.processAction(actionAttr[1]);
 				});
 			} else {
 				element.addEventListener('click', function() {
@@ -711,11 +708,11 @@ SONNY.Functions = {
 				if (element.attributes["sy-min-max"]) {
 					var minMax = element.attributes["sy-min-max"].value;
 						minMax = minMax.split(",");
-						for (ii in minMax) {
+						for (var ii = 0; ii < minMax.length; ++ii) {
 							minMax[ii] = parseInt(minMax[ii]);
 						}
 						
-					if (minMax.length <= 1) throw ("sy-min-max requires 2 comma seperated integer values!");
+					if (minMax.length <= 1 || minMax.length > 2) throw ("sy-min-max requires 2 comma seperated integer values!");
 	
 					if (element.value && element.value !== "") {
 						if (element.value.length >= minMax[0]) {
@@ -777,7 +774,7 @@ SONNY.Functions = {
 	
 	// Clone object node
 	clone: function(x) {
-		if(x == null || typeof x !== 'object') {
+		if(x === null || typeof x !== 'object') {
 			return x;
 		}
 	 
