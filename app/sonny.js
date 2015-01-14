@@ -1,15 +1,21 @@
 /**
  * sonnyJS v0.1.1
  * www.github.com/felixmaier/sonnyJS
+ * @author Felix Maier
  */
-(function (root, factory) {
-    root.SONNY = factory(root, {}, root._);
-}(this, function(SONNY) {
+ 
+/* TODO: RECODE */
+(function() {
+
+var root = this;
+
+var SONNY = SONNY || {};
 
 SONNY = {
     Version: "0.1.1",
     Functions: {},
     CurrentPage: null,
+	LastPages: [],
     Loaded: false,
 	Initialized: false,
     Width: null,
@@ -23,7 +29,6 @@ SONNY = {
 	ShowVersion: false,
 	Server: true,
 	Port: 9005,
-	FullScreenButton: true,
 	Body: "#page",
 	
 	// SONNY version
@@ -82,7 +87,14 @@ SONNY = {
             window.scrollTo(0, 0);
         };
     },
-	
+
+	pushLastPage: function(page) {
+		if (SONNY.LastPages.length >= 10) {
+			SONNY.LastPages.shift();
+		}
+		SONNY.LastPages.push(page);
+	},
+
 	// Preload all pages
     preloadPages: function(data) {
 	
@@ -153,19 +165,6 @@ SONNY = {
 	
 	// TODO: SONNY.loadPage({ }); Add a single page and callback after successfull load
 	
-	initializeFullScreenBtn: function() {
-		if (SONNY.FullScreenButton) {
-			var FullScreenButton = document.querySelector(".fullscreenToggle");
-			if (FullScreenButton) {
-				FullScreenButton.addEventListener('click', function() {
-					SONNY.toggleFullScreen(function(bool) {
-						FullScreenButton.src = bool ? "assets/img/exitfullscreen.png" : "assets/img/gofullscreen.png";
-					});
-				});
-			} else throw ("Can't find element with '.fullscreenToggle' class name!");
-		}
-	},
-	
 	// Fullscreen code snippet by mdn
 	toggleFullScreen: function(fn) {
 	    if (!document.fullscreenElement &&
@@ -180,7 +179,6 @@ SONNY = {
 	            document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
 	        }
 			SONNY.Fullscreen = true;
-			fn(true);
 	    } else {
 	        if (document.exitFullscreen) {
 	            document.exitFullscreen();
@@ -192,16 +190,18 @@ SONNY = {
 	            document.webkitExitFullscreen();
 	        }
 			SONNY.Fullscreen = false;
-			fn(false);
 	    }
+		return SONNY.Fullscreen;
 	},
 	
 	// Render page from core object
     render: function(data) {
 
         SONNY.CurrentPage = data;
+		
+		SONNY.pushLastPage(data);
 
-        data = data.split("/");
+        data = data.match("/") ? data.split("/") : data;
 
         var page, main;
 
@@ -527,7 +527,6 @@ SONNY.init = function(data, ready) {
 		SONNY.resize();
 		SONNY.printVersion();
 		SONNY.sayHello();
-		SONNY.initializeFullScreenBtn();
 	} else {
 		if (!SONNY.Initialized) {
 			if (data) {
@@ -814,6 +813,15 @@ SONNY.Functions = {
 
 	if (window.SONNY) throw ("Another instance of sonnyJS is already loaded!");
 
-	return SONNY;
+    if (typeof exports !== 'undefined') {
+        if (typeof module !== 'undefined' && module.exports) {
+            exports = module.exports = SONNY;
+        }
+        exports.SONNY = SONNY;
+    } else if (typeof define !== 'undefined' && define.amd) {
+        define(SONNY);
+    } else {
+        root.SONNY = SONNY;
+    }
 
-}));
+}).call(this);
