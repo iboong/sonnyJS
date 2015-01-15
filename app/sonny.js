@@ -22,6 +22,7 @@ SONNY = {
     Height: null,
     Mobile: false,
 	Fullscreen: false,
+	saidHello: false,
 	Pages: {},
     PagePath: "view/",
 	LoadFileType: ".html",
@@ -29,7 +30,7 @@ SONNY = {
 	ShowVersion: false,
 	Server: true,
 	Port: 9005,
-	Body: "#page",
+	PageContainer: "syContainer",
 	
 	// SONNY version
     printVersion: function() {
@@ -45,6 +46,7 @@ SONNY = {
 	
 	// Console message
 	sayHello: function() {
+		if (SONNY.saidHello) return;
 		if ( navigator.userAgent.toLowerCase().indexOf('chrome') > -1 ) {
 			var args = [
 				'%c sonny.js ' + SONNY.Version + ' ->%c http://www.sonnyjs.io/ ',
@@ -56,11 +58,8 @@ SONNY = {
 	},
 	
 	// Create the main page container
-	createPageElement: function() {
-		var el = document.createElement('pageContent');
-			if (SONNY.Body.match("#")) el.id = SONNY.Body.replace("#", "").trim();
-			else el.id = SONNY.Body;
-		document.body.appendChild(el);
+	createPageContainer: function() {
+		document.body.appendChild(document.createElement(SONNY.PageContainer));
 	},
 	
 	// Mobile device detection
@@ -246,7 +245,7 @@ SONNY = {
 				
 				var content = throwData(data.Content);
 
-				var body = document.querySelector(SONNY.Body);
+				var body = document.querySelector(SONNY.PageContainer);
 
 				// Clean
 				body.innerHTML = "";
@@ -302,7 +301,7 @@ SONNY = {
 					replace.push(myValue[0]);
 				}
 
-				if (output && output.length > 0) {
+				if (output && output.length) {
 					Object.keys(output).forEach( function(ii) {
 						getServerData(output[ii]).then(function(result) {
 							data = data.replace(replace[0], result);
@@ -497,6 +496,28 @@ SONNY = {
 	}
 };
 
+SONNY.init = function(data, ready) {
+	if (ready) {
+		SONNY.preloadPages(SONNY.pages);
+		SONNY.preloadAnimation.new();
+		SONNY.createPageContainer();
+		SONNY.Width = window.innerWidth;
+		SONNY.Height = window.innerHeight;
+		SONNY.Mobile = SONNY.isMobile();
+		SONNY.resize();
+		SONNY.printVersion();
+		SONNY.sayHello();
+	} else {
+		if (!SONNY.Initialized) {
+			if (data) {
+				SONNY.pages = data;
+				SONNY.loadRessources();
+				SONNY.Initialized = true;
+			} else throw ("Sonny got no pages to load!");
+		} else throw ("Another Sonny instance is already running!");
+	}
+};
+
 SONNY.ressources = [
 	'app/lib/socket.io-1.2.1.js',
 	'app/lib/q.js',
@@ -513,28 +534,6 @@ SONNY.loadRessources = function() {
 		document.head.appendChild(script);
 	} else {
 		SONNY.init("", true);
-	}
-};
-
-SONNY.init = function(data, ready) {
-	if (ready) {
-		SONNY.preloadPages(SONNY.pages);
-		SONNY.preloadAnimation.new();
-		SONNY.createPageElement();
-		SONNY.Width = window.innerWidth;
-		SONNY.Height = window.innerHeight;
-		SONNY.Mobile = SONNY.isMobile();
-		SONNY.resize();
-		SONNY.printVersion();
-		SONNY.sayHello();
-	} else {
-		if (!SONNY.Initialized) {
-			if (data) {
-				SONNY.pages = data;
-				SONNY.loadRessources();
-				SONNY.Initialized = true;
-			} else throw ("Sonny got no pages to load!");
-		} else throw ("Another Sonny instance is already running!");
 	}
 };
 
@@ -630,6 +629,29 @@ SONNY.preloadAnimation = {
 
 };
 
+SONNY.customListener = function(value) {
+	if (value.match(":")) {
+		return value.split(":");
+	} else {
+		var newValue = [];
+			newValue[0] = "click";
+			newValue[1] = value;
+		return newValue;
+	}
+};
+
+SONNY.minMaxAttribute = function(data) {
+	var minMax = data.split(",");
+		
+	for (var ii = 0; ii < minMax.length; ++ii) {
+		minMax[ii] = parseInt(minMax[ii]);
+	}
+	
+	if (minMax.length <= 1 || minMax.length > 2) throw ("sy-min-max requires 2 comma seperated integer values!");
+	else return minMax;
+	
+};
+
 // Hurry up, we're dreaming
 SONNY.Functions = {
 	
@@ -638,12 +660,7 @@ SONNY.Functions = {
 		if (!element) throw ("Received invalid element");
 		// Min Max length property
 		if (element.attributes["sy-min-max"]) {
-			var minMax = element.attributes["sy-min-max"].value;
-				minMax = minMax.split(",");
-				for (var ii = 0; ii < minMax.length; ++ii) {
-					minMax[ii] = parseInt(minMax[ii]);
-				}
-			if (minMax.length <= 1 || minMax.length > 2) throw ("sy-min-max requires 2 comma seperated integer values!");
+			var minMax = SONNY.minMaxAttribute(element.attributes["sy-min-max"].value);
 			element.addEventListener('keypress', function(event) {
 				if (event.srcElement.value.length >= minMax[1]) {
 					if (event.keyCode !== 8) event.preventDefault();
@@ -652,33 +669,18 @@ SONNY.Functions = {
 		}
 		// Load a page
 		if (element.attributes["sy-load"]) {
-			var loadAttr = element.attributes["sy-load"].value;
-			if (loadAttr.match(":")) {
-				loadAttr = loadAttr.split(":");
-				element.addEventListener(loadAttr[0], function() {
-					SONNY.render(loadAttr[1] + SONNY.LoadFileType);
-				});
-			} else {
-				element.addEventListener('click', function() {
-					SONNY.render(element.attributes["sy-load"].value + SONNY.LoadFileType);
-				});
-			}
+			var loadAttribute = SONNY.customListener(element.attributes["sy-load"].value);
+			element.addEventListener(loadAttribute[0], function() {
+				SONNY.render(loadAttribute[1] + SONNY.LoadFileType);
+			});
 		}
 		// Some action for the server
 		if (element.attributes["sy-action"]) {
-			var actionAttr = element.attributes["sy-action"].value;
-			if (actionAttr.match(":")) {
-				actionAttr = actionAttr.split(":");
-				element.addEventListener(actionAttr[0], function() {
-					if (element.attributes["sy-action-values"]) SONNY.Functions.processAction(actionAttr[1], element.attributes["sy-action-values"].value);
-					else SONNY.Functions.processAction(actionAttr[1]);
-				});
-			} else {
-				element.addEventListener('click', function() {
-					if (element.attributes["sy-action-values"]) SONNY.Functions.processAction(element.attributes["sy-action"].value, element.attributes["sy-action-values"].value);
-					else SONNY.Functions.processAction(element.attributes["sy-action"].value);
-				});
-			}
+			var actionAttribute = SONNY.customListener(element.attributes["sy-action"].value);
+			element.addEventListener(actionAttribute[0], function() {
+				if (element.attributes["sy-action-values"]) SONNY.Functions.processAction(actionAttribute[1], element.attributes["sy-action-values"].value);
+				else SONNY.Functions.processAction(actionAttribute[1]);
+			});
 		}
 		// Preload images
 		if (element.attributes["sy-image"]) {
@@ -704,34 +706,28 @@ SONNY.Functions = {
 			Object.keys(resultArray).forEach(function(key) {
 				var element = document.querySelector("input[name=" + resultArray[key] + "]");
 				
+				if (!element.value || element.value === "") return;
+				
 				if (element.attributes["sy-min-max"]) {
-					var minMax = element.attributes["sy-min-max"].value;
-						minMax = minMax.split(",");
-						for (var ii = 0; ii < minMax.length; ++ii) {
-							minMax[ii] = parseInt(minMax[ii]);
-						}
-						
-					if (minMax.length <= 1 || minMax.length > 2) throw ("sy-min-max requires 2 comma seperated integer values!");
-	
-					if (element.value && element.value !== "") {
-						if (element.value.length >= minMax[0]) {
-							if (element.value.length <= minMax[1]) {
-								passedData.push(element.value);
-								if (passedData.length === resultArray.length) {
-									if (passedData && passedData.length) {			
-										socket.emit('message', SONNY.Functions.stringifyMsg(["userAction", action, passedData]), function(responseData){
-											SONNY.render(responseData);
-										});
-									}
+					var minMax = SONNY.minMaxAttribute(element.attributes["sy-min-max"].value);
+					
+					if (element.value.length >= minMax[0]) {
+						if (element.value.length <= minMax[1]) {
+							passedData.push(element.value);
+							if (passedData.length === resultArray.length) {
+								if (passedData && passedData.length) {			
+									socket.emit('message', SONNY.Functions.stringifyMsg(["userAction", action, passedData]), function(responseData){
+										SONNY.render(responseData);
+									});
 								}
-							} else {
-								new NotificationFx({message : "A maximum of "+minMax[1]+" characters are allowed!"}).show();
-								element.focus();
 							}
 						} else {
-							new NotificationFx({message : "At least "+minMax[0]+" characters are required!"}).show();
+							new NotificationFx({message : "A maximum of "+minMax[1]+" characters are allowed!"}).show();
 							element.focus();
 						}
+					} else {
+						new NotificationFx({message : "At least "+minMax[0]+" characters are required!"}).show();
+						element.focus();
 					}
 				}
 			});

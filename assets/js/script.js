@@ -1,3 +1,17 @@
+var SonnyPages = {};
+	// Pages for guests
+	SonnyPages.public = [
+		'public/login.html',
+		'public/register.html'
+	];
+	// Pages for logged in users
+	SonnyPages.private = [
+		'private/home.html',
+		'private/settings.html'
+	];
+
+SONNY.init(SonnyPages);
+
 function initialize() {
 
 var FullScreenButton = document.querySelector(".fullscreenToggle");
