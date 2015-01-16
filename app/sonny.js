@@ -165,7 +165,7 @@ SONNY = {
 	// TODO: SONNY.loadPage({ }); Add a single page and resolve after successfull load
 	
 	// Fullscreen code snippet by mdn
-	toggleFullScreen: function(fn) {
+	toggleFullScreen: function() {
 	    if (!document.fullscreenElement &&
 	        !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
 	        if (document.documentElement.requestFullscreen) {
@@ -270,7 +270,7 @@ SONNY = {
 			}
 		}
 
-		function searchForServerData(data, fn) {
+		function searchForServerData(data, resolve) {
 
 			var loadedData = 0;
 
@@ -278,7 +278,7 @@ SONNY = {
 
 			resolveChildren(object, function(result) {
 				data.Content[0] = result;
-				fn(data);
+				resolve(data);
 			});
 
 			// Asynchonous recursion
