@@ -4,13 +4,17 @@
 
 A small javascript framework (and my first project) to fit my own purposes and learn javascript.<br/>
 
-With sonnyJS you can easily create web based single page applications - At least only a basic html knowledge is required to use the basic features of sonnyJS.
+With sonnyJS you can create realtime single page web applications - At least only a basic html and javascript knowledge is required to use the basic features of sonnyJS.
 
 ### Help
 
- * Template folders lies in view/*
+ * Template folder lies in view/*
  * Server and database template are lying in the server folder
  * Include sonny.js into your website header to load it
+ 
+### Requirements
+
+ * Latest socket.io library
 
 ### Initialize sonnyJS
 
@@ -32,9 +36,22 @@ Everything before the slash sign is interpreted as a folder, lastly the file has
 
 All templates are stored in the <b>view folder</b> by default.
 
+If you dont want to use a online connection, set the SONNY.Server value to false.
+Otherwise the server is enabled by default - you can change the default server port by changing the SONNY.Port value to yours.
+
+```javascript
+SONNY.Server = true;	
+SONNY.Port = 9005;
+```
+
 Finally initialize Sonny with the filled object.
 ```javascript
-SONNY.init(SonnyPages);
+SONNY.init(SonnyPages, function() {
+	// Do any stuff here like:
+	setTimeout( function() {
+    	SONNY.render("public/register.html");
+    }, 2500);
+});
 ```
 
 ### Sonny HTML attributes
@@ -44,7 +61,7 @@ SONNY.init(SonnyPages);
  <b>Usage:</b> <br/>
  ```<div sy-load="public/home">```<br/>
  
- <b>Custom Listeners:</b><br/> ```<div sy-load="mouseover:public/home">```<br/>
+ <b>Custom Listeners:</b><br/> ```<div sy-load="mousedown:public/home">```<br/>
  * ### sy-min-max:
  Adds a min and max length requirement.<br/>
  

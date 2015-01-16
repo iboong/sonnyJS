@@ -95,7 +95,7 @@ SONNY = {
 	},
 
 	// Preload all pages
-    preloadPages: function(data) {
+    preloadPages: function(data, resolve) {
 	
 		if (data) SONNY.Pages = data;
 		else throw ("Please define the pages sonny has to preload!");
@@ -148,9 +148,9 @@ SONNY = {
         function init(object) {
             SONNY.Pages = object;
             SONNY.Loaded = true;
+			resolve();
 			// Delayed to beautify it
 			setTimeout(function() {
-				if (SONNY.Server) SONNY.Connection.init();
 				SONNY.preloadAnimation.hide();
 				setTimeout(function() {
 					SONNY.render(SONNY.HomePage);
@@ -162,7 +162,7 @@ SONNY = {
         load(data);
     },
 	
-	// TODO: SONNY.loadPage({ }); Add a single page and callback after successfull load
+	// TODO: SONNY.loadPage({ }); Add a single page and resolve after successfull load
 	
 	// Fullscreen code snippet by mdn
 	toggleFullScreen: function(fn) {
@@ -282,7 +282,7 @@ SONNY = {
 			});
 
 			// Asynchonous recursion
-			function goDeep(data, callback) {
+			function goDeep(data, resolve) {
 				if (data instanceof Object) {
 					// Backup found
 					if (data.backup) {
@@ -306,14 +306,14 @@ SONNY = {
 								SONNY.GETServerValue(data[key], "getUserData", function(result) {
 									data[key] = result;
 									loadedData--;
-									callback(data);
+									resolve(data);
 								});
 							}
 						} else {
 							goDeep(data[key], function(output) {
 								data[key] = output;
 								if (loadedData <= 0) {
-									callback(data);
+									resolve(data);
 								}
 							});
 						}
@@ -321,16 +321,16 @@ SONNY = {
 				}
 			}
 
-			function scanServerText(data, callback) {
+			function scanServerText(data, resolve) {
 				goDeep(data, function() {
-					callback(data);
+					resolve(data);
 				});
 			}
 
-			function resolveChildren(parent, callback) {
+			function resolveChildren(parent, resolve) {
 				[parent].map(function(data) {
 					scanServerText(data, function() {
-						callback(data);
+						resolve(data);
 					});
 				});
 			}
@@ -344,7 +344,7 @@ SONNY = {
     },
 	
 	// Deferred xhr request
-	GET: function(url, callback) {
+	GET: function(url, resolve) {
 	    var request = new XMLHttpRequest();
 
 		request.open("GET", url, true);
@@ -353,9 +353,9 @@ SONNY = {
 		
 		function onload() {
 	        if (request.status === 200) {
-	            callback(request.responseText);
+	            resolve(request.responseText);
 	        } else {
-	            callback(new Error("Status code was " + request.status));
+	           throw ("Status code was " + request.status);
 	        }
 	    }
 	},
@@ -430,12 +430,12 @@ SONNY = {
 	}
 };
 
-SONNY.GETServerValue = function(data, message, callback) {
+SONNY.GETServerValue = function(data, message, resolve) {
 
 	// Fetch data from server
-	function getServerData(data, message, callback) {
+	function getServerData(data, message, resolve) {
 		socket.emit('message', SONNY.Functions.stringifyMsg([message, data]), function(responseData) {
-			callback(responseData);
+			resolve(responseData);
 		});
 	}
 	
@@ -462,54 +462,59 @@ SONNY.GETServerValue = function(data, message, callback) {
 					data = data.replace(replace[0], result);
 					replace.shift();
 					if (!replace.length) {
-						callback(data);
+						resolve(data);
 					}
 				});
 			});
 		} else {
-			callback(data);
+			resolve(data);
 		}
 	} else throw("Not supported yet!");
 }
 
-SONNY.init = function(data, ready) {
-	if (ready) {
-		SONNY.preloadPages(SONNY.pages);
-		SONNY.preloadAnimation.new();
-		SONNY.createPageContainer();
-		SONNY.Width = window.innerWidth;
-		SONNY.Height = window.innerHeight;
-		SONNY.Mobile = SONNY.isMobile();
-		SONNY.resize();
-		SONNY.printVersion();
-		SONNY.sayHello();
-	} else {
-		if (!SONNY.Initialized) {
-			if (data) {
-				SONNY.pages = data;
-				SONNY.loadRessources();
-				SONNY.Initialized = true;
-			} else throw ("Sonny got no pages to load!");
-		} else throw ("Another Sonny instance is already running!");
+SONNY.init = function(data, resolve) {
+	SONNY.preloadAnimation.new();
+	SONNY.createPageContainer();
+	SONNY.Width = window.innerWidth;
+	SONNY.Height = window.innerHeight;
+	SONNY.Mobile = SONNY.isMobile();
+	SONNY.resize();
+	SONNY.printVersion();
+	SONNY.sayHello();
+	SONNY.loadRessources( function() {
+		if (SONNY.Server) {
+			SONNY.Connection.init(function() {
+				if (!SONNY.Initialized) {
+					if (data) {
+						initialize(data, function() {
+							resolve();
+						});
+					} else throw ("Sonny got no pages to load!");
+				}
+			});
+		} else {
+			initialize(data, function() {
+				resolve();
+			});
+		}
+	});
+	
+	function initialize(data, resolve) {
+		SONNY.preloadPages(data, function() {
+			SONNY.pages = data;
+			SONNY.Initialized = true;
+			resolve();
+		});
 	}
 };
 
-SONNY.ressources = [
-	'app/lib/socket.io-1.2.1.js',
-	'app/lib/notifications.js'
-];
-
-SONNY.loadRessources = function() {
-	if (SONNY.ressources.length) {
-		var script = document.createElement("script");
+SONNY.loadRessources = function(resolve) {
+	var script = document.createElement("script");
+		script.src = 'app/lib/notifications.js';
 		script.addEventListener("load", function() {
-			SONNY.loadRessources();
+			resolve();
 		});
-		script.src = SONNY.ressources.shift();
-		document.head.appendChild(script);
-	} else {
-		SONNY.init("", true);
-	}
+	document.head.appendChild(script);
 };
 
 SONNY.Connection = {
@@ -521,13 +526,14 @@ SONNY.Connection = {
 	// Will get increased
 	reconnectTimer: 500,
 
-	init: function() {
+	init: function(resolve) {
 
 		socket = io.connect(window.location.host + ':' + SONNY.Port + '/');
 
 		socket.on('connect', function () {
 			SONNY.Connection.connected = true;
 			SONNY.Connection.reconnectTimer = 500;
+			resolve();
 		});
 
 		// Deal with data received from the server

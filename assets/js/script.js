@@ -20,11 +20,10 @@ if (FullScreenButton) {
 	});
 } else throw ("Can't find element!");
 
-	SONNY.init(SonnyPages);
-	
-	console.log(SONNY);
+	SONNY.init(SonnyPages, function() {
+		console.log(SONNY);
+	});
 
 }
-
 
 window.addEventListener('DOMContentLoaded', initialize);
