@@ -270,7 +270,7 @@ SONNY = {
 			}
 		}
 
-		function searchForServerData(data, callback) {
+		function searchForServerData(data, fn) {
 
 			var loadedData = 0;
 
@@ -278,7 +278,7 @@ SONNY = {
 
 			resolveChildren(object, function(result) {
 				data.Content[0] = result;
-				callback(data);
+				fn(data);
 			});
 
 			// Asynchonous recursion
@@ -308,8 +308,6 @@ SONNY = {
 									loadedData--;
 									callback(data);
 								});
-							} else {
-								callback(data);
 							}
 						} else {
 							goDeep(data[key], function(output) {
