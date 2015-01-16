@@ -10,7 +10,6 @@ var SonnyPages = {};
 		'private/settings.html'
 	];
 
-SONNY.init(SonnyPages);
 
 function initialize() {
 
@@ -20,7 +19,12 @@ if (FullScreenButton) {
 		FullScreenButton.src = SONNY.toggleFullScreen() ? "assets/img/exitfullscreen.png" : "assets/img/gofullscreen.png";
 	});
 } else throw ("Can't find element!");
-	// SONNY.render("public/login.html");
+
+	SONNY.init(SonnyPages);
+	
+	console.log(SONNY);
+
 }
+
 
 window.addEventListener('DOMContentLoaded', initialize);

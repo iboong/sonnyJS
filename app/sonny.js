@@ -123,7 +123,7 @@ SONNY = {
                     }
                 } else {
                     if (PageObject[index]) {
-                        SONNY.GET(SONNY.PagePath + data[key] + SONNY.antiCache()).then(function(resp) {
+                        SONNY.GET(SONNY.PagePath + data[key] + SONNY.antiCache(), function(resp) {
 							
 							var htmlToDOM = document.implementation.createHTMLDocument("html");
 								htmlToDOM.documentElement.innerHTML = resp;
@@ -234,7 +234,7 @@ SONNY = {
 		function renderPage(data) {
 
 			if (Boolean(data["sy-requireserver"])) {
-				searchForServerData(data).then(function(response) {
+				searchForServerData(data, function(response) {
 					createHTML(response);
 				});
 			} else {
@@ -270,65 +270,19 @@ SONNY = {
 			}
 		}
 
-		function searchForServerData(data) {
+		function searchForServerData(data, callback) {
 
 			var loadedData = 0;
 
-			var deferred = Q.defer();
-
 			var object = data.Content[0];
-			
-			// Fetch user data from server expression
-			var rXuserData = new RegExp(/%([-|\d|\w]+)%/g);
 
-			[object].map(function(key) {
-				resolveChildren(key).then(function(result) {
-					data.Content[0] = result;
-					deferred.resolve(data);
-				});
+			resolveChildren(object, function(result) {
+				data.Content[0] = result;
+				callback(data);
 			});
 
-			// TODO: Does not work properly on specific nodes yet
-			function textmatch(data) {
-				var deferred = Q.defer();
-
-				var myValue,
-					output = [],
-					replace = [];
-
-				while ((myValue = rXuserData.exec(data)) !== null)  {  
-					output.push(myValue[1]);
-					replace.push(myValue[0]);
-				}
-
-				if (output && output.length) {
-					Object.keys(output).forEach( function(ii) {
-						getServerData(output[ii]).then(function(result) {
-							data = data.replace(replace[0], result);
-							replace.shift();
-							if (!replace.length) {
-								deferred.resolve(data);
-							}
-						});
-					});
-				} else {
-					deferred.resolve(data);
-				}
-				return deferred.promise;
-			}
-
-			// Fetch data from server
-			function getServerData(data) {
-				var deferred = Q.defer();
-				socket.emit('message', SONNY.Functions.stringifyMsg(["getUserData", data]), function(responseData) {
-					deferred.resolve(responseData);
-				});
-				return deferred.promise;
-			}
-
-			// Asynchonous deferred recursion
-			function goDeep(data) {
-				var deferred = Q.defer();
+			// Asynchonous recursion
+			function goDeep(data, callback) {
 				if (data instanceof Object) {
 					// Backup found
 					if (data.backup) {
@@ -349,44 +303,39 @@ SONNY = {
 
 								loadedData++;
 
-								textmatch(data[key]).then(function(result) {
+								SONNY.GETServerValue(data[key], "getUserData", function(result) {
 									data[key] = result;
 									loadedData--;
-									deferred.resolve(data);
+									callback(data);
 								});
+							} else {
+								callback(data);
 							}
 						} else {
-							goDeep(data[key]).then(function(output) {
+							goDeep(data[key], function(output) {
 								data[key] = output;
 								if (loadedData <= 0) {
-									deferred.resolve(data);
+									callback(data);
 								}
 							});
 						}
 					});
 				}
-				return deferred.promise;
 			}
 
-			function scanServerText(data) {
-				var deferred = Q.defer();
-				goDeep(data).then(function() {
-					deferred.resolve(data);
+			function scanServerText(data, callback) {
+				goDeep(data, function() {
+					callback(data);
 				});
-				return deferred.promise;
 			}
 
-			function resolveChildren(parent) {
-				var deferred = Q.defer();
-				Q.all([parent].map(function(data) {
-					scanServerText(data).then(function() {
-						deferred.resolve(data);
+			function resolveChildren(parent, callback) {
+				[parent].map(function(data) {
+					scanServerText(data, function() {
+						callback(data);
 					});
-				}));
-				return deferred.promise;
+				});
 			}
-
-			return deferred.promise;
 		}
 
     },
@@ -397,33 +346,20 @@ SONNY = {
     },
 	
 	// Deferred xhr request
-	GET: function(url) {
+	GET: function(url, callback) {
 	    var request = new XMLHttpRequest();
-	    var deferred = Q.defer();
- 
-		function onload() {
-	        if (request.status === 200) {
-	            deferred.resolve(request.responseText);
-	        } else {
-	            deferred.reject(new Error("Status code was " + request.status));
-	        }
-	    }
 
-	    function onerror() {
-	        deferred.reject(new Error("Can't XHR " + JSON.stringify(url)));
-	    }
-
-	    function onprogress(event) {
-	        deferred.notify(event.loaded / event.total);
-	    }
- 
 		request.open("GET", url, true);
 	    request.onload = onload;
-	    request.onerror = onerror;
-	    request.onprogress = onprogress;
 	    request.send();
 		
-	    return deferred.promise;
+		function onload() {
+	        if (request.status === 200) {
+	            callback(request.responseText);
+	        } else {
+	            callback(new Error("Status code was " + request.status));
+	        }
+	    }
 	},
 	
 	// Compile JSON to HTML
@@ -496,6 +432,48 @@ SONNY = {
 	}
 };
 
+SONNY.GETServerValue = function(data, message, callback) {
+
+	// Fetch data from server
+	function getServerData(data, message, callback) {
+		socket.emit('message', SONNY.Functions.stringifyMsg([message, data]), function(responseData) {
+			callback(responseData);
+		});
+	}
+	
+	if (data.match("%(.*)%")) {
+		
+		// User data expression
+		var rXuserData = new RegExp(/%([-|\d|\w]+)%/g);
+		
+		// Global data expression
+		var rXglobalData = new RegExp(/$([-|\d|\w]+)$/g);
+
+		var myValue,
+			output = [],
+			replace = [];
+
+		while ((myValue = rXuserData.exec(data)) !== null)  {  
+			output.push(myValue[1]);
+			replace.push(myValue[0]);
+		}
+
+		if (output && output.length) {
+			Object.keys(output).forEach( function(ii) {
+				getServerData(output[ii], message, function(result) {
+					data = data.replace(replace[0], result);
+					replace.shift();
+					if (!replace.length) {
+						callback(data);
+					}
+				});
+			});
+		} else {
+			callback(data);
+		}
+	} else throw("Not supported yet!");
+}
+
 SONNY.init = function(data, ready) {
 	if (ready) {
 		SONNY.preloadPages(SONNY.pages);
@@ -520,7 +498,6 @@ SONNY.init = function(data, ready) {
 
 SONNY.ressources = [
 	'app/lib/socket.io-1.2.1.js',
-	'app/lib/q.js',
 	'app/lib/notifications.js'
 ];
 
