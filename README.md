@@ -1,5 +1,8 @@
 # sonnyJS
 
+Started recode @17.01.2015
+sonnyJS is currently in an unusable state!
+
 ### What is sonnyJS?
 
 A small javascript framework (and my first project) to fit my own purposes and learn javascript.<br/>
