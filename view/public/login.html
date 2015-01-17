@@ -10,20 +10,31 @@
 			<!-- Autofill fix end -->
             <ol class="fs-fields">
                 <li class="fs-current">
-                    <input class="fs-anim-lower" sy-min-max="3,6" name="username" type="text" placeholder="Username.." required>
-					<br/><br/>
-                    <input class="fs-anim-lower" sy-min-max="3,6" name="password" type="password" placeholder="Password.." required>
+					<span class="input input--isao">
+						<input class="input__field input__field--isao" sy-min-max="3,6" name="username" type="text" value="demo" />
+						<label class="input__label input__label--isao" data-content="Type in your username">
+							<span class="input__label-content input__label-content--isao">Username</span>
+						</label>
+					</span><br/>			
+					<span class="input input--isao">
+						<input class="input__field input__field--isao" sy-min-max="3,6" name="password" type="password" value="demo" />
+						<label class="input__label input__label--isao" data-content="Type in your password">
+							<span class="input__label-content input__label-content--isao">Password</span>
+						</label>
+					</span>
                 </li>
             </ol>
-			<br/><br/>
+			<br/>
 			<div class="button-container">
 				<div class="morph-button morph-button-modal morph-button-modal-2 morph-button-fixed">
-					<button type="button" sy-action="login" sy-action-values="username,password">Sign In</button>
+					<button class="btn btn-1 btn-1c" type="button" sy-action="login" sy-action-values="username,password">Sign In</button>
 				</div>
 				<div class="morph-button morph-button-modal morph-button-modal-2 morph-button-fixed">
-					<button type="button" sy-load="click:public/register">Create a new account</button>
+					<button class="btn btn-1 btn-1c" type="button" sy-load="click:public/register">Create a new account</button>
 				</div>
 			</div>
+			<br/>
+			<a href="http://www.github.com/felixmaier/sonnyjs">Get me on <i class="fa fa-github"></i></a>
         </form>
     </div>
 </app>

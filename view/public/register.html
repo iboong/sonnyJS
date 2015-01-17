@@ -8,21 +8,41 @@
 			<input style="display:none" type="password"/>
             <ol class="fs-fields">
                 <li class="fs-current">
-                    <input class="fs-anim-lower" name="username" type="text" placeholder="Username.." required>
-					<br/><br/>
-                    <input class="fs-anim-lower" name="email" type="text" placeholder="Email.." required>
-					<br/><br/>
-                    <input class="fs-anim-lower" name="password" type="password" placeholder="Password.." required>
-					<br/><br/>
-                    <input class="fs-anim-lower" name="password2" type="password" placeholder="Confirm Password.." required>
+					<span class="input input--isao">
+						<input class="input__field input__field--isao" sy-min-max="3,6" name="username" type="text" />
+						<label class="input__label input__label--isao" data-content="Type in a username">
+							<span class="input__label-content input__label-content--isao">Username</span>
+						</label>
+					</span>
+					<br/>
+					<span class="input input--isao">
+						<input class="input__field input__field--isao" sy-min-max="3,6" name="email" type="text" />
+						<label class="input__label input__label--isao" data-content="Type in your email">
+							<span class="input__label-content input__label-content--isao">Email</span>
+						</label>
+					</span>
+					<br/>
+					<span class="input input--isao">
+						<input class="input__field input__field--isao" sy-min-max="3,6" name="password" type="password" />
+						<label class="input__label input__label--isao" data-content="Type in a password">
+							<span class="input__label-content input__label-content--isao">Password</span>
+						</label>
+					</span>
+					<br/>
+					<span class="input input--isao">
+						<input class="input__field input__field--isao" sy-min-max="3,6" name="password2" type="password" />
+						<label class="input__label input__label--isao" data-content="Confirm the password">
+							<span class="input__label-content input__label-content--isao">Confirm Password</span>
+						</label>
+					</span>
                 </li>
             </ol>
 			<br/><br/>
 			<div class="morph-button morph-button-modal morph-button-modal-2 morph-button-fixed">
-				<button type="button" sy-action="register" sy-action-values="username,email,password,password2">Sign Up</button>
+				<button class="btn btn-1 btn-1c" type="button" sy-action="register" sy-action-values="username,email,password,password2">Sign Up</button>
 			</div>
 			<div class="morph-button morph-button-modal morph-button-modal-2 morph-button-fixed">
-				<button type="button" sy-load="public/login" sy-action-values="username,password">Already have an account</button>
+				<button class="btn btn-1 btn-1c" type="button" sy-load="public/login" sy-action-values="username,password">Already have an account</button>
 			</div>
         </form>
     </div>

@@ -155,7 +155,7 @@ SONNY = {
 				setTimeout(function() {
 					SONNY.render(SONNY.HomePage);
 				}, 250);
-			}, 850);
+			}, 1550);
             
         }
 
@@ -594,13 +594,18 @@ SONNY.preloadAnimation = {
 	
 	show: function() {
 		var fullscreenElement = document.createElement("div");
-			fullscreenElement.className = "heartbeat center";
+			fullscreenElement.className = "loader";
+			
+		for (var ii = 0; ii < 4; ++ii) {
+			var el = document.createElement("span");
+				fullscreenElement.appendChild(el);
+		}
 	
 		document.body.appendChild(fullscreenElement);
 	},
 	
 	hide: function() {
-		var Elements = document.querySelectorAll(".heartbeat");
+		var Elements = document.querySelectorAll(".loader");
 		for (var ii = 0; ii < Elements.length; ++ii) {
 			if (Elements[ii] instanceof Element) {
 				Elements[ii].parentNode.removeChild(Elements[ii]);
