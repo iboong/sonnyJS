@@ -72,8 +72,8 @@
 
                                 var DOM = new SONNY.Compiler(resp);
                                 var DOMOBJECT = new SONNY.Compiler(DOM);
-								    DOMOBJECT.content = DOMOBJECT.inside;
-								    DOMOBJECT.path = data[key];
+                                    DOMOBJECT.content = DOMOBJECT.inside;
+                                    DOMOBJECT.path = data[key];
 
                                     delete DOMOBJECT.inside;
 
@@ -116,11 +116,11 @@
 		 * @param ready (boolean) page is in an ready to be rendered state
          */
         SONNY.Page = function(page) {
-			this.name = String(page["sy-sitename"]);
-			this.path = String(page.path);
-			this.requireServer = Boolean(page["sy-requireserver"]) || false;
-			this.content = page.content;
-			this.ready = true;
+            this.name = String(page["sy-sitename"]);
+            this.path = String(page.path);
+            this.requireServer = Boolean(page["sy-requireserver"]) || false;
+            this.content = page.content;
+            this.ready = true;
         };
 
         SONNY.Page.prototype.constructor = SONNY.Page;
@@ -146,13 +146,13 @@
 
         /**
          * Compile a html string into dom html
-		 * @param html (string)
+         * @param html (string)
          */
         SONNY.Compiler.prototype.DOM = function(html) {
             this.HTMLDOM = document.implementation.createHTMLDocument("html");
             this.HTMLDOM.documentElement.innerHTML = html;
-			return this.HTMLDOM.body.children[0];
-		};
+            return this.HTMLDOM.body.children[0];
+        };
 		
         /**
          * Compile html to an json object
@@ -227,15 +227,15 @@
          * Render a virtual page
          */
         SONNY.Renderer = function(instance) {
-			
-			this.__instance = instance;
+
+            this.__instance = instance;
 			
         };
 
         SONNY.Renderer.prototype.constructor = SONNY.Renderer;
 
         /**
-		 * @param page (string) : public/home
+         * @param page (string) : public/home
          */
         SONNY.Renderer.prototype.render = function(page) {
 
@@ -304,7 +304,7 @@
         SONNY.Instance.prototype.constructor = SONNY.Instance;
 
 
-		/**
+        /**
          * Mobile device detection
          */
         SONNY.Instance.prototype.isMobile = function() {
