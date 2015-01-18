@@ -1,86 +1,84 @@
 /**
- * sonnyJS v0.0.1
+ * sonnyJS v0.0.2
  * www.github.com/felixmaier/sonnyJS
  * @author Felix Maier
  */
 
-(function() {
+(function() { 'use strict'
 
     var root = this;
 
     var SONNY = SONNY || {};
 
-        SONNY.VERSION = "0.0.1";
-
-        SONNY.LOADED = false;
+        SONNY.VERSION = "0.0.2";
 
         SONNY.INITIALIZED = false;
-
-        SONNY.CURRENTPAGE = null;
-
-        SONNY.PAGES = {};
-
-        SONNY.WIDTH = null;
-
-        SONNY.HEIGHT = null;
-
-        SONNY.MOBILE = null;
-
-        SONNY.FULLSCREEN = false;
 
         SONNY.PAGEPATH = "view/";
 
         SONNY.FILETYPE = ".html";
 
-        SONNY.STARTPAGE = null;
-
         SONNY.SHOWVERSION = false;
-
-        SONNY.SERVER = null;
-
-        SONNY.PAGECONTAINER = "syContainer";
 
         /**
          * Manages all virtual pages
-         * @methods: add, remove, init
+         * @methods add, remove, init
          */
-        SONNY.PageManager = function() {
+        SONNY.PageManager = function(resolve) {
+
+            var self = this;
+
             if (!SONNY.LOADED) {
-                this.init(this.virtualPages, function(result) {
-                    SONNY.PAGES = result;
+                this.init(this.VIRTUALPAGES, function(result) {
+                    self.PAGES = result;
                     SONNY.LOADED = true;
-                    console.log(SONNY);
+                    if (self.STARTPAGE) {
+                        var renderer = new SONNY.Renderer(self);
+                            renderer.render(self.STARTPAGE);
+                    }
+                    resolve();			
                 });
-            }	
+            }
+
         };
-	
+
         SONNY.PageManager.prototype.constructor = SONNY.PageManager;
 
         /**
          * Compile every page into a virtual page
-         * @param: object, callback
+         * @param data (object)
          */
         SONNY.PageManager.prototype.init = function(data, resolve) {
-			
+
             var self = this;
-			
+
             var pageObject = new Object,
                 loadedPages = 0;
-			
+
             (function load(data, index) {
                 Object.keys(data).forEach(function(key) {
                     if (!(data[key] instanceof Object)) {
                         ++loadedPages;
                     }
                     if (data[key] instanceof Object) {
-                        if (self.virtualPages[key]) {
+                        if (self.VIRTUALPAGES[key]) {
                             pageObject[key] = {};
                             load(data[key], key);
                         }
                     } else {
                         if (pageObject[index]) {
                             self.load(SONNY.PAGEPATH + data[key], function(resp) {
-                                pageObject[index][data[key]] = resp;
+                               pageObject[index][data[key]] = resp;
+
+                                var DOM = new SONNY.Compiler(resp);
+                                var DOMOBJECT = new SONNY.Compiler(DOM);
+								    DOMOBJECT.content = DOMOBJECT.inside;
+								    DOMOBJECT.path = data[key];
+
+                                    delete DOMOBJECT.inside;
+
+                                pageObject[index][data[key]] = new SONNY.Page(DOMOBJECT);
+
                                 --loadedPages;
                                 if (loadedPages <= 0) {
                                     resolve(pageObject);
@@ -89,67 +87,83 @@
                         }
                     }
                 });
-            }(this.virtualPages));
+            }(this.VIRTUALPAGES));
         };
 
-
-        /*
+        /**
          * Add a page object to the pageInstances
-         * @param: public/home
-         */
-        SONNY.PageManager.prototype.add = function(page) {
-            if (!this.pageInstances.page + SONNY.FILETYPE) {
-                this.pageInstances[ page + SONNY.FILETYPE ] = page + SONNY.FILETYPE;
-            } else throw ("Can't add " + page + "!");
-        };
-
-        /*
-         * Remove a page object from the pageInstances
-         * @param: public/home
-         */
-        SONNY.PageManager.prototype.remove = function(page) {
-            if (this.pageInstances.page + SONNY.FILETYPE) {
-                delete this.pageInstances.page + SONNY.FILETYPE;
-            } else throw ("Can't remove " + page + "!");
-        };
-
-        /*
-         * Add a page object to the pageInstances
-         * @param: public/home
+         * @param: url (string) : public/home
          */
         SONNY.PageManager.prototype.load = function(url, resolve) {	
-            this.request = new SONNY.GET();
-            this.request.onload = function() {
+            var request = new SONNY.GET();
+				request.onload = function() {
                 if (this.status === 200) {
                     resolve(this.responseText);
                 } else {
-                    throw ("Status code was " + this.status);
+                    throw new Error ("Status code was " + this.status);
                 }
             };
-            this.request.open('GET', url, true);
-            if (this.request.overrideMimeType) this.request.overrideMimeType('text/html');
-            this.request.send(null);
+            request.open('GET', url, true);
+            if (request.overrideMimeType) request.overrideMimeType('text/html');
+            request.send(null);
         };
+
+        /**
+         * Represents a page object
+         * @param name (string) name of the page
+         * @param server (boolean) page requires server values
+         * @param content (object) content of the page to render
+		 * @param ready (boolean) page is in an ready to be rendered state
+         */
+        SONNY.Page = function(page) {
+			this.name = String(page["sy-sitename"]);
+			this.path = String(page.path);
+			this.requireServer = Boolean(page["sy-requireserver"]) || false;
+			this.content = page.content;
+			this.ready = true;
+        };
+
+        SONNY.Page.prototype.constructor = SONNY.Page;
 
         /**
          * Compiler to virtualise html and render objects
          */
         SONNY.Compiler = function() {
-			
+            switch (typeof arguments[0]) {
+                case 'object':
+                    return new this.HTML(arguments[0]);
+                    break;
+                case 'HTMLElement' || 'Element':
+                    return new this.JSON(arguments[0]);
+                    break;
+                case 'string':
+                    return new this.DOM(arguments[0]);
+                    break;
+            }
         };
 
         SONNY.Compiler.prototype.constructor = SONNY.Compiler;
 
-        /*
-         * Compile html to an object
+        /**
+         * Compile a html string into dom html
+		 * @param html (string)
+         */
+        SONNY.Compiler.prototype.DOM = function(html) {
+            this.HTMLDOM = document.implementation.createHTMLDocument("html");
+            this.HTMLDOM.documentElement.innerHTML = html;
+			return this.HTMLDOM.body.children[0];
+		};
+		
+        /**
+         * Compile html to an json object
          */
         SONNY.Compiler.prototype.HTML = function(object) {
             if (!object instanceof Object) throw new Error ("Received arguments of invalid type");
             var virtualPage = {};
                 virtualPage.key = object.tagName.toLowerCase();
             if (object.hasAttribute) {
-                for (i = 0; i < object.attributes.length; i++) {
-                    virtualPage[object.attributes[i].name] = object.attributes[i].value;
+                for (var ii = 0; ii < object.attributes.length; ii++) {
+                    virtualPage[object.attributes[ii].name] = object.attributes[ii].value;
                 }
             }
             if (object.hasChildNodes()) {
@@ -164,7 +178,7 @@
 
                 while (child) {
                     if (child.nodeType === 1 && child.nodeName !== 'SCRIPT') {
-                        virtualPage.inside.push(this.HTML(child));
+                        virtualPage.inside.push(new SONNY.Compiler(child));
                     }
                     child = child.nextSibling;
                 }
@@ -172,7 +186,7 @@
             return virtualPage;
         };
 
-        /*
+        /**
          * Compile json object into dom html
          */
         SONNY.Compiler.prototype.JSON = function(object) {
@@ -188,7 +202,7 @@
                     if (ii === "inside") {
                         if (data.inside instanceof Object) {
                             for (var key = 0; key < data.inside.length; ++key) {
-                                var insideElements = this.JSON(data.inside[key]);
+                                var insideElements = new SONNY.Compiler(data.inside[key]);
                                 element.appendChild(insideElements[0]);
                             }
                         }
@@ -198,7 +212,7 @@
                             if (ii !== "backup") element.setAttribute(ii, data[ii]);
                         }
                         catch (e) {
-                            throw ("JSON rendering failed: " + e);
+                            throw new Error ("JSON rendering failed: " + e);
                         }
                     }
                 }
@@ -209,17 +223,79 @@
             return array;
         };
 
+        /**
+         * Render a virtual page
+         */
+        SONNY.Renderer = function(instance) {
+			
+			this.__instance = instance;
+			
+        };
+
+        SONNY.Renderer.prototype.constructor = SONNY.Renderer;
 
         /**
-         * @param: Page object
+		 * @param page (string) : public/home
          */
-        SONNY.Instance = function(Pages) {
+        SONNY.Renderer.prototype.render = function(page) {
 
-            this.instance = this;
+            if (!page instanceof String) throw new Error("Invalid page format!");
 
-            this.virtualPages = Pages;
+            this.__instance.CURRENTPAGE = page;
 
-            SONNY.PageManager.call(this);
+            page = page.match("/") ? page.split("/") : page;
+
+            var page, 
+                main;	
+				
+        };
+
+        /**
+         * @param Page/settings object
+         */
+        SONNY.Instance = function(object, resolve) {
+
+            if (SONNY.INITIALIZED) throw new Error("Cannot run multiple sonny instances");
+
+            this.INSTANCE = this;
+
+            this.STARTPAGE = null;
+
+            this.PAGECONTAINER = null;
+
+            this.CURRENTPAGE = null;
+
+            this.WIDTH = window.innerWidth;
+
+            this.HEIGHT = window.innerHeight;
+
+            this.FULLSCREEN = false;
+
+            this.SERVER = null;
+			
+            if (object.Settings) {
+                if (!object.Settings instanceof Object) throw new Error ("Invalid settings type");
+                for (var ii in object.Settings) {
+                    var original = ii;
+                    ii = String(ii.toUpperCase());
+                    if (this[ii] || this[ii] === null) {
+                        this[ii] = object.Settings[original];
+                    }
+                }
+                delete object.Settings;
+            } else throw new Error ("No settings defined!");
+
+            this.VIRTUALPAGES = object;
+
+            this.isMobile();
+
+            this.resize();			
+
+            SONNY.INITIALIZED = true;
+
+            SONNY.PageManager.call(this, function() {
+                resolve();
+			});
 
         };
 
@@ -227,14 +303,46 @@
 
         SONNY.Instance.prototype.constructor = SONNY.Instance;
 
-			
+
+		/**
+         * Mobile device detection
+         */
+        SONNY.Instance.prototype.isMobile = function() {
+            if (navigator.userAgent.match(/Android/i) ||
+                navigator.userAgent.match(/webOS/i) ||
+                navigator.userAgent.match(/iPhone/i) ||
+                navigator.userAgent.match(/iPad/i) ||
+                navigator.userAgent.match(/iPod/i) ||
+                navigator.userAgent.match(/BlackBerry/i) ||
+                navigator.userAgent.match(/Windows Phone/i)) {
+                this.MOBILE = true;
+            } else {
+                this.MOBILE = false;
+            }
+        };
+
+        /**
+         * Cross browser ajax request
+         */
+        SONNY.Instance.prototype.resize = function() {
+
+            var self = this;
+
+            window.addEventListener('resize', function() {
+                self.WIDTH = window.innerWidth;
+                self.HEIGHT = window.innerHeight;
+                window.scrollTo(0, 0);
+            });
+        };
+
+
         /**
          * Cross browser ajax request
          */
         SONNY.GET = function() {
             var activexmodes = ['Msxml2.XMLHTTP.6.0', 'Msxml2.XMLHTTP.3.0', 'Microsoft.XMLHTTP'];
 
-            if (window.ActiveXObject) { //Test for support for ActiveXObject in IE first (as XMLHttpRequest in IE7 is broken)
+            if (window.ActiveXObject) { //Support for ActiveXObject in IE first (as XMLHttpRequest in IE7 is broken)
                 for (var ii = 0; ii < activexmodes.length; ++ii) {
                     try {
                         return new window.ActiveXObject(activexmodes[ii]);
@@ -251,9 +359,10 @@
 
 
         // Prevent multiple sonny instances
-        if (window.SONNY) throw ("Another instance of sonnyJS is already loaded!");
+        if (window.SONNY) throw new Error ("Another instance of sonnyJS is already initialized!");
 
         root.SONNY = SONNY;
+
 
 }).call(this);
 
@@ -272,6 +381,14 @@ var SonnyPages = {};
         'private/settings.html'
     ];
 
-    new SONNY.Instance(SonnyPages);
+    // Define settings here
+    SonnyPages.Settings = {
+        startpage: "public/login",
+        pagecontainer: "syContainer"
+    }
+	
+    var instance = new SONNY.Instance(SonnyPages, function() {
+        // Do anything you want here
+    });
 
 })();
