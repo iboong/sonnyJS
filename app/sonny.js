@@ -1,5 +1,5 @@
 /**
- * sonnyJS v0.0.2
+ * sonnyJS v0.0.5
  * www.github.com/felixmaier/sonnyJS
  * @author Felix Maier
  */
@@ -10,7 +10,7 @@
 
     var SONNY = SONNY || {};
 
-        SONNY.VERSION = "0.0.2";
+        SONNY.VERSION = "0.0.5";
 
         SONNY.INITIALIZED = false;
 
@@ -36,7 +36,7 @@
                         var renderer = new SONNY.Renderer(self);
                             renderer.render(self.STARTPAGE);
                     }
-                    resolve();			
+                    resolve();
                 });
             }
 
@@ -70,8 +70,10 @@
                             self.load(SONNY.PAGEPATH + data[key], function(resp) {
                                pageObject[index][data[key]] = resp;
 
-                                var DOM = new SONNY.Compiler(resp);
-                                var DOMOBJECT = new SONNY.Compiler(DOM);
+                                var compiler = new SONNY.Compiler();
+
+                                var DOM = compiler.DOM(resp);
+                                var DOMOBJECT = compiler.HTML(DOM);
                                     DOMOBJECT.content = DOMOBJECT.inside;
                                     DOMOBJECT.path = data[key];
 
@@ -94,9 +96,9 @@
          * Add a page object to the pageInstances
          * @param: url (string) : public/home
          */
-        SONNY.PageManager.prototype.load = function(url, resolve) {	
+        SONNY.PageManager.prototype.load = function(url, resolve) {
             var request = new SONNY.GET();
-				request.onload = function() {
+                request.onload = function() {
                 if (this.status === 200) {
                     resolve(this.responseText);
                 } else {
@@ -153,7 +155,7 @@
             this.HTMLDOM.documentElement.innerHTML = html;
             return this.HTMLDOM.body.children[0];
         };
-		
+
         /**
          * Compile html to an json object
          */
@@ -229,7 +231,7 @@
         SONNY.Renderer = function(instance) {
 
             this.__instance = instance;
-			
+
         };
 
         SONNY.Renderer.prototype.constructor = SONNY.Renderer;
@@ -243,11 +245,70 @@
 
             this.__instance.CURRENTPAGE = page;
 
+            this.get(page);
+
+            this.compile(this.__instance.RENDERQUEUE.shift());
+
+        };
+
+        /**
+         * @param page (string) : public/home
+         */
+        SONNY.Renderer.prototype.kill = function(page) {
+            var body = document.querySelector(this.__instance.PAGECONTAINER);
+            if (body) {
+                body.innerHTML = "";
+                this.__instance.CURRENTPAGE = null;
+            }
+        };
+
+        /**
+         * @param page (SONNY.Page)
+         */
+        SONNY.Renderer.prototype.compile = function(page) {
+            console.log(page);
+        };
+
+        /**
+         * Extract virtual page from instance
+         * @param page (string) : public/home
+         */
+        SONNY.Renderer.prototype.get = function(page) {
+
+            var self = this.__instance;
+
             page = page.match("/") ? page.split("/") : page;
 
-            var page, 
-                main;	
-				
+            var data,
+                main,
+                result;
+
+            Object.keys(page).forEach(function(key) {
+                getPage(page[key]);
+            });
+
+            function getPage(value, index) {
+                if (self.PAGES[value]) {
+                    getPage(self.PAGES[value], value);
+                } else {
+                    var url = "";
+                    if (value && index) {
+                        for (var ii in page) {
+                            if (!page[ii].match(SONNY.FILETYPE)) {
+                                url += page[ii] + "/";
+                                if (self.PAGES[page[ii]]) {
+                                    data = self.PAGES[page[ii]];
+                                }
+                            } else {
+                                url += page[ii];
+                                main = url;
+                                if (!(data[main])) throw (": Page "+main+" does not exist!");
+                                self.RENDERQUEUE.push(data[main]);
+                            }
+                        }
+                    }
+                }
+            }
         };
 
         /**
@@ -271,11 +332,12 @@
 
             this.FULLSCREEN = false;
 
-            this.SERVER = null;
-			
+            this.ONLINE = null;
+
             if (object.Settings) {
                 if (!object.Settings instanceof Object) throw new Error ("Invalid settings type");
                 for (var ii in object.Settings) {
+                    if (object.Settings[ii] === null || object.Settings[ii] === undefined) throw new Error ( ii + " value is invalid");
                     var original = ii;
                     ii = String(ii.toUpperCase());
                     if (this[ii] || this[ii] === null) {
@@ -287,15 +349,17 @@
 
             this.VIRTUALPAGES = object;
 
+            this.RENDERQUEUE = [];
+
             this.isMobile();
 
-            this.resize();			
+            this.resize();
 
             SONNY.INITIALIZED = true;
 
             SONNY.PageManager.call(this, function() {
                 resolve();
-			});
+            });
 
         };
 
@@ -373,7 +437,7 @@
                 } else if (document.documentElement.webkitRequestFullscreen) {
                     document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
                 }
-				this.FULLSCREEN = true;
+                this.FULLSCREEN = true;
             } else {
                 if (document.exitFullscreen) {
                     document.exitFullscreen();
@@ -387,8 +451,7 @@
                 this.FULLSCREEN = false;
             }
             return this.FULLSCREEN;
-        };	
-
+        };
 
         // Prevent multiple sonny instances
         if (window.SONNY) throw new Error ("Another instance of sonnyJS is already initialized!");
@@ -415,14 +478,15 @@ var SonnyPages = {};
 
     // Define settings here
     SonnyPages.Settings = {
-        startpage: "public/login",
-        pagecontainer: "syContainer"
+        startpage: "public/login.html",
+        pagecontainer: "syContainer",
+        online: false
     }
-	
+
     var instance = new SONNY.Instance(SonnyPages, function() {
         // Do anything you want here
-		var renderer = new SONNY.Renderer(instance);
-            renderer.render("public/login");
+        var renderer = new SONNY.Renderer(instance);
+            renderer.render("public/login.html");
     });
 
 })();
