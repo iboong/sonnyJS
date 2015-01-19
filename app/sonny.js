@@ -113,7 +113,7 @@
          * @param name (string) name of the page
          * @param server (boolean) page requires server values
          * @param content (object) content of the page to render
-		 * @param ready (boolean) page is in an ready to be rendered state
+         * @param ready (boolean) page is in an ready to be rendered state
          */
         SONNY.Page = function(page) {
             this.name = String(page["sy-sitename"]);
@@ -357,6 +357,38 @@
             }
         };
 
+        /**
+         * Cross browser fullscreen toggle
+         * @return true if fullscreen else false
+         */
+        SONNY.Instance.prototype.toggleFullscreen = function() {
+            if (!document.fullscreenElement &&
+                !document.mozFullScreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.msRequestFullscreen) {
+                    document.documentElement.msRequestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) {
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                }
+				this.FULLSCREEN = true;
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+                this.FULLSCREEN = false;
+            }
+            return this.FULLSCREEN;
+        };	
+
 
         // Prevent multiple sonny instances
         if (window.SONNY) throw new Error ("Another instance of sonnyJS is already initialized!");
@@ -389,6 +421,8 @@ var SonnyPages = {};
 	
     var instance = new SONNY.Instance(SonnyPages, function() {
         // Do anything you want here
+		var renderer = new SONNY.Renderer(instance);
+            renderer.render("public/login");
     });
 
 })();
