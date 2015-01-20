@@ -188,23 +188,23 @@
 				
 			var self = this;
 
-            Object.keys(data).forEach(function(ii) {
-                if (ii === "key") {
+            Object.keys(data).forEach(function(key) {
+                if (key === "key") {
                     element = document.createElement(data.key);
-                } else if (ii === "text") {
+                } else if (key === "text") {
                     element.innerHTML = data.text;
                 } else {
-                    if (ii === "inside") {
+                    if (key === "inside") {
                         if (data.inside instanceof Object) {
-                            for (var key = 0; key < data.inside.length; ++key) {
-                                var insideElements = self.JSON(data.inside[key]);
+                            for (var ii = 0; ii < data.inside.length; ++ii) {
+                                var insideElements = self.JSON(data.inside[ii]);
                                 element.appendChild(insideElements[0]);
                             }
                         }
                     } else {
                         try {
                             // Don't render backups
-                            if (ii !== "backup") element.setAttribute(ii, data[ii]);
+                            if (key !== "backup") element.setAttribute(key, data[key]);
                         }
                         catch (e) {
                             throw new Error ("JSON rendering failed: " + e);
@@ -227,8 +227,6 @@
 			
 			this.QUEUE = [];
 
-			this.CONTAINER = null;
-
 			this.BODY = document.querySelector(this.instance.PAGECONTAINER) || null;
 
             this.createContainer();
@@ -244,11 +242,11 @@
 
             if (!page instanceof String) throw new Error("Invalid page format!");
 
-            this.instance.CURRENTPAGE = page;
-
             this.get(page);
 
             this.compile(this.QUEUE.shift());
+
+            this.instance.CURRENTPAGE = page;
 
         };
 		
@@ -257,10 +255,10 @@
          */
         SONNY.Renderer.prototype.createContainer = function() {
             if (!this.BODY && !this.CONTAINER) {
+                var container = document.createElement(this.instance.PAGECONTAINER);
                 this.BODY = document.querySelector("body");
-				this.CONTAINER = document.createElement(this.instance.PAGECONTAINER);
-                this.BODY.appendChild(this.CONTAINER);
-				this.BODY = document.querySelector(this.CONTAINER.tagName.toLowerCase());
+                this.BODY.appendChild(container);
+				this.BODY = document.querySelector(container.tagName.toLowerCase());
             }
         };
 
@@ -288,6 +286,8 @@
                 array.push(compiler.JSON(page[ii]));	
             }
 
+            array = array[0] || array;
+
             this.attach(array);			
         };
 		
@@ -297,10 +297,12 @@
          */
         SONNY.Renderer.prototype.attach = function(page) {
             try {
-                page = page[0] || page;
-                this.BODY.innerHTML = page;
+                this.kill();
+                for (var ii in page) {
+                    this.BODY.appendChild(page[ii]);
+                }
             } catch (e) { 
-                throw new Error("Something happened really wrong!");
+                throw new Error(e);
             }
         };
 
@@ -520,8 +522,6 @@ var SonnyPages = {};
         // Do anything you want here
         var renderer = new SONNY.Renderer(instance);
             renderer.render("public/login.html");
-			
-			console.log(instance);
     });
 
 })();
