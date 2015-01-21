@@ -6,6 +6,10 @@
 
 (function() { 'use strict'
 
+    var $ = function() {
+        return document.querySelector(arguments[0]);
+    };
+
     var root = this;
 
     var SONNY = SONNY || {};
@@ -213,9 +217,33 @@
                 }
             });
 
+            element = this.vivify(element);
+            			
             array.push(element);
 
             return array;
+        };
+		
+        /**
+         * Search for specific attributes in dom element
+         * @param element (dom)
+         */
+        SONNY.Compiler.prototype.vivify = function(element) {
+
+            var self = this;
+
+			this.LOAD = "sy-load";
+            this.MINMAX = "sy-min-max";
+            this.ACTION = "sy-action";
+            this.IMAGE = "sy-image";
+
+            if (!element) throw new Error("Invalid element type!");
+            if (element.attributes[this.LOAD]) {
+                element.addEventListener('click', function() {
+					console.log(element.attributes[self.LOAD].value + SONNY.FILETYPE);
+                });
+            }
+            return element;
         };
 
         /**
@@ -224,12 +252,8 @@
         SONNY.Renderer = function(instance) {
 
             this.instance = instance;
-			
-			this.QUEUE = [];
 
-			this.BODY = document.querySelector(this.instance.PAGECONTAINER) || null;
-
-            this.createContainer();
+            this.QUEUE = [];
 
         };
 
@@ -249,25 +273,13 @@
             this.instance.CURRENTPAGE = page;
 
         };
-		
-        /**
-         * Create the page container 
-         */
-        SONNY.Renderer.prototype.createContainer = function() {
-            if (!this.BODY && !this.CONTAINER) {
-                var container = document.createElement(this.instance.PAGECONTAINER);
-                this.BODY = document.querySelector("body");
-                this.BODY.appendChild(container);
-				this.BODY = document.querySelector(container.tagName.toLowerCase());
-            }
-        };
 
         /**
          * @param page (string) : public/home
          */
         SONNY.Renderer.prototype.kill = function(page) {
-            if (this.BODY) {
-                this.BODY.innerHTML = "";
+            if (this.instance.BODY) {
+                this.instance.BODY.innerHTML = "";
                 this.instance.CURRENTPAGE = null;
             }
         };
@@ -299,11 +311,19 @@
             try {
                 this.kill();
                 for (var ii in page) {
-                    this.BODY.appendChild(page[ii]);
+                    this.instance.BODY.appendChild(page[ii]);
                 }
             } catch (e) { 
                 throw new Error(e);
             }
+        };
+		
+        /**
+         * Add multiple event listeners to dom
+         * @param element (dom)
+         */
+        SONNY.Renderer.prototype.addListeners = function(page) {
+            
         };
 
         /**
@@ -321,12 +341,12 @@
                 result;
 
             Object.keys(page).forEach(function(key) {
-                getPage(page[key]);
+                fetch(page[key]);
             });
 
-            function getPage(value, index) {
+            function fetch(value, index) {
                 if (self.instance.PAGES[value]) {
-                    getPage(self.instance.PAGES[value], value);
+                    fetch(self.instance.PAGES[value], value);
                 } else {
                     var url = "";
                     if (value && index) {
@@ -353,13 +373,15 @@
          */
         SONNY.Instance = function(object, resolve) {
 
+            var self = this;
+
             if (SONNY.INITIALIZED) throw new Error("Cannot run multiple sonny instances");
 
             this.INSTANCE = this;
 
             this.STARTPAGE = null;
 
-            this.PAGECONTAINER = null;
+            this.PAGECONTAINER = "syContainer";
 
             this.CURRENTPAGE = null;
 
@@ -369,7 +391,7 @@
 
             this.FULLSCREEN = false;
 
-            this.ONLINE = null;
+            this.ONLINE = false;
 
             if (object.Settings) {
                 if (!object.Settings instanceof Object) throw new Error ("Invalid settings type");
@@ -389,12 +411,15 @@
             this.isMobile();
 
             this.resize();
-
-            SONNY.INITIALIZED = true;
-
-            SONNY.Virtualiser.call(this, function() {
-                resolve();
-            });
+			
+            this.BODY = $(this.PAGECONTAINER) || null;
+			
+            this.createContainer( function() {
+				SONNY.INITIALIZED = true;
+				SONNY.Virtualiser.call(self, function() {
+					resolve();
+				});
+			});
 
         };
 
@@ -403,6 +428,22 @@
         SONNY.Instance.prototype.constructor = SONNY.Instance;
 
 
+        /**
+         * Create the page container 
+         */
+        SONNY.Instance.prototype.createContainer = function(resolve) {
+            var self = this;
+			window.addEventListener('DOMContentLoaded', function() {
+                if (!self.BODY && !self.CONTAINER) {
+                    var container = document.createElement(self.PAGECONTAINER);
+                    self.BODY = $("body");
+                    self.BODY.appendChild(container);
+                    self.BODY = $(container.tagName.toLowerCase());
+                }
+                resolve();
+            });
+        };
+		
         /**
          * Mobile device detection
          */
