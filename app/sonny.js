@@ -136,6 +136,10 @@
         SONNY.Compiler = function() {
 
             this.instance = this;
+			
+            if (arguments[0]) {
+                this.vivifier = new SONNY.Vivifier(arguments[0]);
+            }
 
         };
 
@@ -217,7 +221,9 @@
                 }
             });
 
-            element = this.vivify(element);
+			if (this.vivifier) {
+				element = this.vivifier.vivify(element);
+			}
             			
             array.push(element);
 
@@ -228,19 +234,28 @@
          * Search for specific attributes in dom element
          * @param element (dom)
          */
-        SONNY.Compiler.prototype.vivify = function(element) {
+        SONNY.Vivifier = function() {
+
+            this.instance = arguments[0] || this;
+
+        };
+		
+        SONNY.Vivifier.prototype.constructor = SONNY.Vivifier;
+		
+		
+        SONNY.Vivifier.prototype.vivify = function(element) {
 
             var self = this;
 
-			this.LOAD = "sy-load";
-            this.MINMAX = "sy-min-max";
-            this.ACTION = "sy-action";
-            this.IMAGE = "sy-image";
+            var LOAD = "sy-load",
+                MINMAX = "sy-min-max",
+                ACTION = "sy-action",
+                IMAGE = "sy-image";
 
             if (!element) throw new Error("Invalid element type!");
-            if (element.attributes[this.LOAD]) {
+            if (element.attributes[LOAD]) {
                 element.addEventListener('click', function() {
-					console.log(element.attributes[self.LOAD].value + SONNY.FILETYPE);
+                    self.instance.render(element.attributes[LOAD].value + SONNY.FILETYPE);
                 });
             }
             return element;
@@ -289,7 +304,7 @@
          * @param page (SONNY.Page)
          */
         SONNY.Renderer.prototype.compile = function(page) {
-            var compiler = new SONNY.Compiler();
+            var compiler = new SONNY.Compiler(this);
             var array = [];
 			
             page = page.content || page;
@@ -415,11 +430,11 @@
             this.BODY = $(this.PAGECONTAINER) || null;
 			
             this.createContainer( function() {
-				SONNY.INITIALIZED = true;
-				SONNY.Virtualiser.call(self, function() {
-					resolve();
-				});
-			});
+                SONNY.INITIALIZED = true;
+                SONNY.Virtualiser.call(self, function() {
+                    resolve();
+                });
+            });
 
         };
 
@@ -433,7 +448,7 @@
          */
         SONNY.Instance.prototype.createContainer = function(resolve) {
             var self = this;
-			window.addEventListener('DOMContentLoaded', function() {
+            window.addEventListener('DOMContentLoaded', function() {
                 if (!self.BODY && !self.CONTAINER) {
                     var container = document.createElement(self.PAGECONTAINER);
                     self.BODY = $("body");
@@ -554,7 +569,7 @@ var SonnyPages = {};
 
     // Define settings here
     SonnyPages.Settings = {
-        startpage: "public/register.html",
+        //startpage: "public/register.html",
         pagecontainer: "syContainer",
         online: false
     }
