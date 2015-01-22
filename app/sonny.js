@@ -136,7 +136,7 @@
         SONNY.Compiler = function() {
 
             this.instance = this;
-			
+
             if (arguments[0]) {
                 this.vivifier = new SONNY.Vivifier(arguments[0]);
             }
@@ -193,8 +193,8 @@
         SONNY.Compiler.prototype.JSON = function(data) {
             var element,
                 array = [];
-				
-			var self = this;
+
+            var self = this;
 
             Object.keys(data).forEach(function(key) {
                 if (key === "key") {
@@ -221,15 +221,15 @@
                 }
             });
 
-			if (this.vivifier) {
-				element = this.vivifier.vivify(element);
-			}
-            			
+            if (this.vivifier) {
+                element = this.vivifier.vivify(element);
+            }
+
             array.push(element);
 
             return array;
         };
-		
+
         /**
          * Search for specific attributes in dom element
          * @param element (dom)
@@ -239,23 +239,54 @@
             this.instance = arguments[0] || this;
 
         };
-		
+
         SONNY.Vivifier.prototype.constructor = SONNY.Vivifier;
-		
-		
+
+        /**
+         * Search for specific attributes in dom element
+         * @param element (dom)
+         */
         SONNY.Vivifier.prototype.vivify = function(element) {
 
             var self = this;
 
-            var LOAD = "sy-load",
-                MINMAX = "sy-min-max",
-                ACTION = "sy-action",
-                IMAGE = "sy-image";
+            this.LOAD = "sy-load";
+            this.MINMAX = "sy-min-max";
+            this.ACTION = "sy-action";
+            this.IMAGE = "sy-image";
 
             if (!element) throw new Error("Invalid element type!");
-            if (element.attributes[LOAD]) {
-                element.addEventListener('click', function() {
-                    self.instance.render(element.attributes[LOAD].value + SONNY.FILETYPE);
+
+            if (element.attributes[this.LOAD]) {
+                if (element.attributes[this.LOAD].value.match(":")) {
+                    element = this.addListeners(element, this.LOAD);
+                } else {
+                    element.addEventListener('click', function() {
+                        self.instance.render(element.attributes[self.LOAD].value + SONNY.FILETYPE);
+                    });
+                }
+            }
+            return element;
+        };
+
+        /**
+         * Add multiple event listeners to dom
+         * @param element (dom)
+         */
+        SONNY.Vivifier.prototype.addListeners = function(element, type) {
+            var self = this;
+            var listeners = element.attributes[type].value.split(":");
+            if (listeners[0].split("&").length >= 2) {
+                listeners = listeners[0].match("&") ? listeners[0].split("&") : listeners;
+                for (var ii = 0; ii < listeners.length; ii++){
+                    listeners[ii].trim();
+                    element.addEventListener(listeners[ii], function() {
+                        self.instance.render(element.attributes[type].value.split(":")[1] + SONNY.FILETYPE);
+                    });
+                }
+            } else {
+                element.addEventListener(listeners[0], function() {
+                    self.instance.render(listeners[1] + SONNY.FILETYPE);
                 });
             }
             return element;
@@ -306,18 +337,18 @@
         SONNY.Renderer.prototype.compile = function(page) {
             var compiler = new SONNY.Compiler(this);
             var array = [];
-			
+
             page = page.content || page;
 
             for (var ii in page) {
-                array.push(compiler.JSON(page[ii]));	
+                array.push(compiler.JSON(page[ii]));
             }
 
             array = array[0] || array;
 
-            this.attach(array);			
+            this.attach(array);
         };
-		
+
         /**
          * Parse html to the page container
          * @param page (html)
@@ -331,14 +362,6 @@
             } catch (e) { 
                 throw new Error(e);
             }
-        };
-		
-        /**
-         * Add multiple event listeners to dom
-         * @param element (dom)
-         */
-        SONNY.Renderer.prototype.addListeners = function(page) {
-            
         };
 
         /**
@@ -426,9 +449,9 @@
             this.isMobile();
 
             this.resize();
-			
+
             this.BODY = $(this.PAGECONTAINER) || null;
-			
+
             this.createContainer( function() {
                 SONNY.INITIALIZED = true;
                 SONNY.Virtualiser.call(self, function() {
@@ -458,7 +481,7 @@
                 resolve();
             });
         };
-		
+
         /**
          * Mobile device detection
          */
@@ -551,33 +574,3 @@
 
 
 }).call(this);
-
-
-(function() {
-
-var SonnyPages = {};
-    // Pages for guests
-    SonnyPages.public = [
-        'public/login.html',
-        'public/register.html'
-    ];
-    // Pages for logged in users
-    SonnyPages.private = [
-        'private/home.html',
-        'private/settings.html'
-    ];
-
-    // Define settings here
-    SonnyPages.Settings = {
-        //startpage: "public/register.html",
-        pagecontainer: "syContainer",
-        online: false
-    }
-
-    var instance = new SONNY.Instance(SonnyPages, function() {
-        // Do anything you want here
-        var renderer = new SONNY.Renderer(instance);
-            renderer.render("public/login.html");
-    });
-
-})();
