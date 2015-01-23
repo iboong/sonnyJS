@@ -200,19 +200,22 @@
 
         var self = this;
 
-        if (data) {
-            if (data.key.toLowerCase() === "include") {
-                if (data.page) {
-                    self.instance.get(data.page + SONNY.FILETYPE);
-                    var result = self.instance.QUEUE.shift().content;
-                    for (var kk in result) {
-                        evaluate(result[kk]);
-                    }
-                } else throw new Error('"Include" requires an page attribute!');
-            } else evaluate(data);
-        }
-
+        evaluate(data);
+        
         function evaluate(data) {
+
+            if (data) {
+                if (data.key.toLowerCase() === "include") {
+                    if (data.page) {
+                        self.instance.get(data.page + SONNY.FILETYPE);
+                        var result = self.instance.QUEUE.shift().content;
+                        for (var kk in result) {
+                            evaluate(result[kk]);
+                        }
+                    } else throw new Error('"Include" requires an page attribute!');
+                }
+            }
+        
             Object.keys(data).forEach(function(key) {
                 if (key === "key") {
                     element = document.createElement(data.key);
@@ -605,7 +608,9 @@ var SonnyPages = {};
     SonnyPages.public = [
         'public/login.html',
         'public/register.html',
-        'public/github.html'
+        'public/github.html',
+        'public/github2.html',
+		'public/github3.html'
     ];
     // Pages for logged in users
     SonnyPages.private = [
