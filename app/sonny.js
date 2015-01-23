@@ -201,11 +201,11 @@
         var self = this;
 
         evaluate(data);
-        
+
         function evaluate(data) {
 
             if (data) {
-                if (data.key.toLowerCase() === "include") {
+                if (data.key === "include") {
                     if (data.page) {
                         self.instance.get(data.page + SONNY.FILETYPE);
                         var result = self.instance.QUEUE.shift().content;
@@ -214,29 +214,31 @@
                         }
                     } else throw new Error('"Include" requires an page attribute!');
                 }
-            }
-        
+            } else throw new Error("Received invalid data");
+
             Object.keys(data).forEach(function(key) {
-                if (key === "key") {
-                    element = document.createElement(data.key);
-                } else if (key === "text") {
-                    element.innerHTML = data.text;
-                } else {
-                    if (key === "inside") {
-                        if (data.inside instanceof Object) {
-                            for (var ii = 0; ii < data.inside.length; ++ii) {
-                                var insideElements = self.JSON(data.inside[ii]);
-                                for (var ll in insideElements) {
-                                    element.appendChild(insideElements[ll]);
+                if (data.key !== "include") {
+                    if (key === "key") {
+                        element = document.createElement(data.key);
+                    } else if (key === "text") {
+                        element.innerHTML = data.text;
+                    } else {
+                        if (key === "inside") {
+                            if (data.inside instanceof Object) {
+                                for (var ii = 0; ii < data.inside.length; ++ii) {
+                                    var insideElements = self.JSON(data.inside[ii]);
+                                    for (var ll in insideElements) {
+                                        element.appendChild(insideElements[ll]);
+                                    }
                                 }
                             }
-                        }
-                    } else {
-                        try {
-                            // Don't render backups
-                            if (key !== "backup") element.setAttribute(key, data[key]);
-                        } catch (e) {
-                            throw new Error("JSON rendering failed: " + e);
+                        } else {
+                            try {
+                                // Don't render backups
+                                if (key !== "backup") element.setAttribute(key, data[key]);
+                            } catch (e) {
+                                throw new Error("JSON rendering failed: " + e);
+                            }
                         }
                     }
                 }
@@ -610,7 +612,7 @@ var SonnyPages = {};
         'public/register.html',
         'public/github.html',
         'public/github2.html',
-		'public/github3.html'
+        'public/github3.html'
     ];
     // Pages for logged in users
     SonnyPages.private = [
