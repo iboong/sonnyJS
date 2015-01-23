@@ -344,7 +344,7 @@
                 array.push(compiler.JSON(page[ii]));
             }
 
-            array = array[0] || array;
+            this.kill();
 
             this.attach(array);
         };
@@ -355,9 +355,8 @@
          */
         SONNY.Renderer.prototype.attach = function(page) {
             try {
-                this.kill();
                 for (var ii in page) {
-                    this.instance.BODY.appendChild(page[ii]);
+                    this.instance.BODY.appendChild(page[ii][0]);
                 }
             } catch (e) { 
                 throw new Error(e);
