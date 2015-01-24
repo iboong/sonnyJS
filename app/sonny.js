@@ -203,19 +203,11 @@
         evaluate(data);
 
         function evaluate(data) {
-
-            if (data) {
-                if (data.key === "include") {
-                    if (data.page) {
-                        self.instance.get(data.page + SONNY.FILETYPE);
-                        var result = self.instance.QUEUE.shift().content;
-                        for (var kk in result) {
-                            evaluate(result[kk]);
-                        }
-                    } else throw new Error('"Include" requires an page attribute!');
-                }
-            } else throw new Error("Received invalid data");
-
+            
+            if (!data) throw new Error("Received invalid data");
+            
+            include(data);
+        
             Object.keys(data).forEach(function(key) {
                 if (data.key !== "include") {
                     if (key === "key") {
@@ -249,6 +241,37 @@
             array.push(element);
 
         };
+
+        function include(data) {
+            if (data.key === "include") {
+
+                if (!data.page) throw new Error('"Include" requires an page attribute!');
+
+                var includes = self.instance.__instance.INCLUDES;
+                    includes.push(data.page + SONNY.FILETYPE);
+
+                if (includes.length) {
+                    var capture = includes.indexOf(data.page + SONNY.FILETYPE);
+                    var counter = 0;
+                    if (capture > -1) {
+                        for (var ii = 0; ii < includes.length; ++ii) {
+                            if (includes[ii] === includes[capture]) counter++;
+                            if (counter > 1000) throw new Error ("Infinite include recursion in " + data.page + SONNY.FILETYPE + "! Please check your includes!");
+                        }
+                    }
+                }
+
+                if (self.instance.__instance.CURRENTPAGE === data.page + SONNY.FILETYPE) throw new Error ("Infinite include recursion in " + data.page + SONNY.FILETYPE + "! Please check your includes!");
+    
+                self.instance.get(data.page + SONNY.FILETYPE);
+
+                var result = self.instance.QUEUE.shift().content;
+
+                for (var kk in result) {
+                    evaluate(result[kk]);
+                }
+            }
+        }
 
         return array;
     };
@@ -339,13 +362,15 @@
 
         this.get(page);
 
+        this.__instance.CURRENTPAGE = page;
+        
+        this.__instance.INCLUDES = [];
+
         var result = this.compile(this.QUEUE.shift());
 
         for (var ii in result) {
             this.attach(result[ii]);
         }
-
-        this.__instance.CURRENTPAGE = page;
 
     };
 
