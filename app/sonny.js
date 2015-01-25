@@ -35,13 +35,14 @@
 
         if (!SONNY.LOADED) {
             this.init(this.VIRTUALPAGES, function(result) {
+				self.renderer = new SONNY.Renderer(self);
                 self.PAGES = result;
-                SONNY.LOADED = true;
-                if (self.STARTPAGE) {
-                    var renderer = new SONNY.Renderer(self);
-                    renderer.render(self.STARTPAGE);
-                }
-                resolve();
+				self.PAGES = self.Inheritance(result);
+				SONNY.LOADED = true;
+				resolve();
+				if (self.STARTPAGE) {
+					self.renderer.render(self.STARTPAGE);
+				}
             });
         }
 
@@ -50,7 +51,7 @@
     SONNY.Virtualiser.prototype.constructor = SONNY.Virtualiser;
 
     /**
-     * Compile every page into a virtual page
+     * Compile every page into an virtual page
      * @param data (object)
      */
     SONNY.Virtualiser.prototype.init = function(data, resolve) {
@@ -60,7 +61,7 @@
         var pageObject = new Object,
             loadedPages = 0;
 
-        (function load(data, index) {
+        var _virtualise = function(data, index) {
             Object.keys(data).forEach(function(key) {
                 if (!(data[key] instanceof Object)) {
                     ++loadedPages;
@@ -68,17 +69,19 @@
                 if (data[key] instanceof Object) {
                     if (self.VIRTUALPAGES[key]) {
                         pageObject[key] = {};
-                        load(data[key], key);
+                        _virtualise(data[key], key);
                     }
                 } else {
                     if (pageObject[index]) {
-                        self.load(SONNY.PAGEPATH + data[key], function(resp) {
+                        self.GET(SONNY.PAGEPATH + data[key], function(resp) {
 
-                            var compiler = new SONNY.Compiler();
+							self.CURRENTRENDER = data[key];
+
+                            var compiler = new SONNY.Compiler(self);
 
                             var DOM = compiler.DOM(resp);
 
-                            if (DOM.tagName !== 'APP') throw new Error('Place your page inside an "app" tag');
+                            if (DOM.tagName !== 'APP') throw new Error('Missing "app" tag in ' + data[key] + '!');
 
                             var DOMOBJECT = compiler.HTML(DOM);
                                 DOMOBJECT.content = DOMOBJECT.inside;
@@ -87,7 +90,7 @@
                             delete DOMOBJECT.inside;
 
                             pageObject[index][data[key]] = new SONNY.Page(DOMOBJECT);
-
+							
                             --loadedPages;
                             if (loadedPages <= 0) {
                                 resolve(pageObject);
@@ -96,14 +99,59 @@
                     }
                 }
             });
-        }(this.VIRTUALPAGES));
+        };
+		_virtualise(this.VIRTUALPAGES);
     };
+
+	/**
+     * Check for inheritance
+     * @param: object (SONNY.Page object)
+     */
+    SONNY.Virtualiser.prototype.Inheritance = function(object, resolve) {
+
+		var self = this;
+
+		var counter = 0;
+
+		var originalObject = object;
+
+		var array = [];
+
+		var _resolve = function(data, original) {
+            if (typeof data === 'object') {
+				if (data.path) {
+					var originalPath = data.path;
+					data.path = data.path.split("/");
+					original = original[data.path[0]][originalPath];
+				}
+				if (data && data.key === "include") {
+					counter++;
+					original.includes++;
+					if (!data.page) throw new Error("Include requires an page attribute!");
+					var includedContent = self.renderer.get(data.page + SONNY.FILETYPE).content;
+					_goBack(includedContent, original);
+				}
+				for (var ii in data) {
+					_resolve(data[ii], original);
+				}
+			}
+        };
+
+		var _goBack = function(data, path) {
+			
+		};
+
+		_resolve(object, originalObject);
+
+		return object;
+		
+	};
 
     /**
      * Add a page object to the pageInstances
      * @param: url (string) : public/home
      */
-    SONNY.Virtualiser.prototype.load = function(url, resolve) {
+    SONNY.Virtualiser.prototype.GET = function(url, resolve) {
         var request = new SONNY.GET();
         request.onload = function() {
             if (this.status === 200) {
@@ -112,7 +160,7 @@
                 throw new Error("Status code was " + this.status);
             }
         };
-        request.open('GET', url, true);
+        request.open('GET', url + "?" + (new Date()).getTime(), true);
         if (request.overrideMimeType) request.overrideMimeType('text/html');
         request.send(null);
     };
@@ -122,6 +170,7 @@
      * @param name (string) name of the page
      * @param server (boolean) page requires server values
      * @param content (object) content of the page to render
+	 * @param includes (integer) counts amount of included external pages
      * @param ready (boolean) page is in an ready to be rendered state
      */
     SONNY.Page = function(page) {
@@ -129,6 +178,7 @@
         this.path = String(page.path);
         this.requireServer = Boolean(page["sy-requireserver"]) || false;
         this.content = page.content;
+		this.includes = 0;
         this.ready = true;
     };
 
@@ -141,9 +191,7 @@
 
         this.instance = this;
 
-        if (arguments[0]) {
-            this.instance = arguments[0];
-        }
+        if (arguments[0]) this.instance = arguments[0];
 
     };
 
@@ -194,29 +242,25 @@
     /**
      * Compile json object into dom html
      */
-    SONNY.Compiler.prototype.JSON = function(data) {
+    SONNY.Compiler.prototype.JSON = function(data, include) {
+
         var element,
             array = [];
 
         var self = this;
 
-        evaluate(data);
+        var _compile = function(data) {
 
-        function evaluate(data) {
-            
             if (!data) throw new Error("Received invalid data");
-            
-            include(data);
-        
-            Object.keys(data).forEach(function(key) {
-                if (data.key !== "include") {
+
+            for (var key in data) {
                     if (key === "key") {
                         element = document.createElement(data.key);
                     } else if (key === "text") {
                         element.innerHTML = data.text;
                     } else {
                         if (key === "inside") {
-                            if (data.inside instanceof Object) {
+                            if (data.inside) {
                                 for (var ii = 0; ii < data.inside.length; ++ii) {
                                     var insideElements = self.JSON(data.inside[ii]);
                                     for (var ll in insideElements) {
@@ -227,14 +271,13 @@
                         } else {
                             try {
                                 // Don't render backups
-                                if (key !== "backup") element.setAttribute(key, data[key]);
+                                if (element && key !== "backup") element.setAttribute(key, data[key]);
                             } catch (e) {
                                 throw new Error("JSON rendering failed: " + e);
                             }
                         }
                     }
-                }
-            });
+            }
 
             element = new SONNY.Vivifier(self.instance).vivify(element);
 
@@ -242,37 +285,8 @@
 
         };
 
-        function include(data) {
-            if (data.key === "include") {
-
-                if (!data.page) throw new Error('"Include" requires an page attribute!');
-
-                var includes = self.instance.__instance.INCLUDES;
-                    includes.push(data.page + SONNY.FILETYPE);
-
-                if (includes.length) {
-                    var capture = includes.indexOf(data.page + SONNY.FILETYPE);
-                    var counter = 0;
-                    if (capture > -1) {
-                        for (var ii = 0; ii < includes.length; ++ii) {
-                            if (includes[ii] === includes[capture]) counter++;
-                            if (counter > 1000) throw new Error ("Infinite include recursion in " + data.page + SONNY.FILETYPE + "! Please check your includes!");
-                        }
-                    }
-                }
-
-                if (self.instance.__instance.CURRENTPAGE === data.page + SONNY.FILETYPE) throw new Error ("Infinite include recursion in " + data.page + SONNY.FILETYPE + "! Please check your includes!");
-    
-                self.instance.get(data.page + SONNY.FILETYPE);
-
-                var result = self.instance.QUEUE.shift().content;
-
-                for (var kk in result) {
-                    evaluate(result[kk]);
-                }
-            }
-        }
-
+		_compile(data);
+		
         return array;
     };
 
@@ -345,8 +359,6 @@
 
         this.__instance = instance || this;
 
-        this.QUEUE = [];
-
     };
 
     SONNY.Renderer.prototype.constructor = SONNY.Renderer;
@@ -360,13 +372,13 @@
 
         if (!page instanceof String) throw new Error("Invalid page format!");
 
-        this.get(page);
+        this.page = this.get(page);
 
         this.__instance.CURRENTPAGE = page;
         
         this.__instance.INCLUDES = [];
 
-        var result = this.compile(this.QUEUE.shift());
+        var result = this.compile(this.page);
 
         for (var ii in result) {
             this.attach(result[ii]);
@@ -431,13 +443,9 @@
             main,
             result;
 
-        Object.keys(page).forEach(function(key) {
-            fetch(page[key]);
-        });
-
-        function fetch(value, index) {
+        var _fetch = function(value, index) {
             if (self.__instance.PAGES[value]) {
-                fetch(self.__instance.PAGES[value], value);
+                _fetch(self.__instance.PAGES[value], value);
             } else {
                 var url = "";
                 if (value && index) {
@@ -450,13 +458,19 @@
                         } else {
                             url += page[ii];
                             main = url;
+							result = data[main];
                             if (!(data[main])) throw new Error("The page " + main + " does not exist or was not successfully loaded!");
-                            self.QUEUE.push(data[main]);
                         }
                     }
                 }
             }
         }
+		
+		for (var key in page) {
+            _fetch(page[key]);
+        }
+		
+		return result;
     };
 
     /**
@@ -484,18 +498,7 @@
 
         this.ONLINE = false;
 
-        if (object.Settings) {
-            if (!object.Settings instanceof Object) throw new Error("Invalid settings type");
-            for (var ii in object.Settings) {
-                if (object.Settings[ii] === null || object.Settings[ii] === undefined) throw new Error(ii + " value is invalid");
-                var original = ii;
-                ii = String(ii.toUpperCase());
-                if (this[ii] || this[ii] === null) {
-                    this[ii] = object.Settings[original];
-                }
-            }
-            delete object.Settings;
-        } else throw new Error("No settings defined!");
+        this.processSettings(object);
 
         this.VIRTUALPAGES = object;
 
@@ -534,6 +537,25 @@
             resolve();
         });
     };
+
+	/**
+	 * Process settings from instance declaration
+	 * @param object.Settings
+	 */
+	SONNY.Instance.prototype.processSettings = function(object) {
+		if (object.Settings) {
+			if (!object.Settings instanceof Object) throw new Error("Invalid settings type");
+			for (var ii in object.Settings) {
+				if (object.Settings[ii] === null || object.Settings[ii] === undefined) throw new Error(ii + " value is invalid");
+				var original = ii;
+				ii = String(ii.toUpperCase());
+				if (this[ii] || this[ii] === null) {
+					this[ii] = object.Settings[original];
+				}
+			}
+			delete object.Settings;
+		} else throw new Error("No settings defined!");
+	};
 
     /**
      * Mobile device detection
@@ -636,8 +658,7 @@ var SonnyPages = {};
         'public/login.html',
         'public/register.html',
         'public/github.html',
-        'public/github2.html',
-        'public/github3.html'
+		'public/github2.html'
     ];
     // Pages for logged in users
     SonnyPages.private = [
