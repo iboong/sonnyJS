@@ -35,14 +35,14 @@
 
         if (!SONNY.LOADED) {
             this.init(this.VIRTUALPAGES, function(result) {
-				self.renderer = new SONNY.Renderer(self);
+                self.renderer = new SONNY.Renderer(self);
                 self.PAGES = result;
-				self.PAGES = self.Inheritance(result);
-				SONNY.LOADED = true;
-				resolve();
-				if (self.STARTPAGE) {
-					self.renderer.render(self.STARTPAGE);
-				}
+                self.PAGES = self.Inheritance(result);
+                SONNY.LOADED = true;
+                resolve();
+                if (self.STARTPAGE) {
+                    self.renderer.render(self.STARTPAGE);
+                }
             });
         }
 
@@ -75,7 +75,7 @@
                     if (pageObject[index]) {
                         self.GET(SONNY.PAGEPATH + data[key], function(resp) {
 
-							self.CURRENTRENDER = data[key];
+                            self.CURRENTRENDER = data[key];
 
                             var compiler = new SONNY.Compiler(self);
 
@@ -90,7 +90,7 @@
                             delete DOMOBJECT.inside;
 
                             pageObject[index][data[key]] = new SONNY.Page(DOMOBJECT);
-							
+                            
                             --loadedPages;
                             if (loadedPages <= 0) {
                                 resolve(pageObject);
@@ -100,52 +100,52 @@
                 }
             });
         };
-		_virtualise(this.VIRTUALPAGES);
+        _virtualise(this.VIRTUALPAGES);
     };
 
-	/**
+    /**
      * Check for inheritance
      * @param: object (SONNY.Page object)
      */
     SONNY.Virtualiser.prototype.Inheritance = function(object, resolve) {
 
-		var self = this;
+        var self = this;
 
-		var counter = 0;
+        var counter = 0;
 
-		var originalObject = object;
+        var originalObject = object;
 
-		var array = [];
+        var array = [];
 
-		var _resolve = function(data, original) {
+        var _resolve = function(data, original) {
             if (typeof data === 'object') {
-				if (data.path) {
-					var originalPath = data.path;
-					data.path = data.path.split("/");
-					original = original[data.path[0]][originalPath];
-				}
-				if (data && data.key === "include") {
-					counter++;
-					original.includes++;
-					if (!data.page) throw new Error("Include requires an page attribute!");
-					var includedContent = self.renderer.get(data.page + SONNY.FILETYPE).content;
-					_goBack(includedContent, original);
-				}
-				for (var ii in data) {
-					_resolve(data[ii], original);
-				}
-			}
+                if (data.path) {
+                    var originalPath = data.path;
+                    data.path = data.path.split("/");
+                    original = original[data.path[0]][originalPath];
+                }
+                if (data && data.key === "include") {
+                    counter++;
+                    original.includes++;
+                    if (!data.page) throw new Error("Include requires an page attribute!");
+                    var includedContent = self.renderer.get(data.page + SONNY.FILETYPE).content;
+                    _goBack(includedContent, original);
+                }
+                for (var ii in data) {
+                    _resolve(data[ii], original);
+                }
+            }
         };
 
-		var _goBack = function(data, path) {
-			
-		};
+        var _goBack = function(data, path) {
+            
+        };
 
-		_resolve(object, originalObject);
+        _resolve(object, originalObject);
 
-		return object;
-		
-	};
+        return object;
+        
+    };
 
     /**
      * Add a page object to the pageInstances
@@ -170,7 +170,7 @@
      * @param name (string) name of the page
      * @param server (boolean) page requires server values
      * @param content (object) content of the page to render
-	 * @param includes (integer) counts amount of included external pages
+     * @param includes (integer) counts amount of included external pages
      * @param ready (boolean) page is in an ready to be rendered state
      */
     SONNY.Page = function(page) {
@@ -178,12 +178,24 @@
         this.path = String(page.path);
         this.requireServer = Boolean(page["sy-requireserver"]) || false;
         this.content = page.content;
-		this.includes = 0;
+        this.includes = 0;
         this.ready = true;
     };
 
     SONNY.Page.prototype.constructor = SONNY.Page;
 
+    /**
+     * Interprets sonny pages
+     * @methods loops
+     */
+    SONNY.Interpreter = function() {
+
+        this.instance = this;
+
+        if (arguments[0]) this.instance = arguments[0];
+
+    };
+    
     /**
      * Compiler to virtualise html and render objects
      */
@@ -285,8 +297,8 @@
 
         };
 
-		_compile(data);
-		
+        _compile(data);
+        
         return array;
     };
 
@@ -458,19 +470,19 @@
                         } else {
                             url += page[ii];
                             main = url;
-							result = data[main];
+                            result = data[main];
                             if (!(data[main])) throw new Error("The page " + main + " does not exist or was not successfully loaded!");
                         }
                     }
                 }
             }
         }
-		
-		for (var key in page) {
+        
+        for (var key in page) {
             _fetch(page[key]);
         }
-		
-		return result;
+        
+        return result;
     };
 
     /**
@@ -538,24 +550,24 @@
         });
     };
 
-	/**
-	 * Process settings from instance declaration
-	 * @param object.Settings
-	 */
-	SONNY.Instance.prototype.processSettings = function(object) {
-		if (object.Settings) {
-			if (!object.Settings instanceof Object) throw new Error("Invalid settings type");
-			for (var ii in object.Settings) {
-				if (object.Settings[ii] === null || object.Settings[ii] === undefined) throw new Error(ii + " value is invalid");
-				var original = ii;
-				ii = String(ii.toUpperCase());
-				if (this[ii] || this[ii] === null) {
-					this[ii] = object.Settings[original];
-				}
-			}
-			delete object.Settings;
-		} else throw new Error("No settings defined!");
-	};
+    /**
+     * Process settings from instance declaration
+     * @param object.Settings
+     */
+    SONNY.Instance.prototype.processSettings = function(object) {
+        if (object.Settings) {
+            if (!object.Settings instanceof Object) throw new Error("Invalid settings type");
+            for (var ii in object.Settings) {
+                if (object.Settings[ii] === null || object.Settings[ii] === undefined) throw new Error(ii + " value is invalid");
+                var original = ii;
+                ii = String(ii.toUpperCase());
+                if (this[ii] || this[ii] === null) {
+                    this[ii] = object.Settings[original];
+                }
+            }
+            delete object.Settings;
+        } else throw new Error("No settings defined!");
+    };
 
     /**
      * Mobile device detection
@@ -658,7 +670,7 @@ var SonnyPages = {};
         'public/login.html',
         'public/register.html',
         'public/github.html',
-		'public/github2.html'
+        'public/github2.html'
     ];
     // Pages for logged in users
     SonnyPages.private = [
