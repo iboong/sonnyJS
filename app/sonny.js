@@ -37,7 +37,7 @@
             this.init(this.VIRTUALPAGES, function(result) {
                 self.renderer = new SONNY.Renderer(self);
                 self.PAGES = result;
-                self.PAGES = self.Inheritance(result); console.log(self.PAGES);
+                self.PAGES = self.Inheritance(result);
                 SONNY.LOADED = true;
                 resolve();
                 if (self.STARTPAGE) {
