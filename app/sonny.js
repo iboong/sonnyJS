@@ -75,8 +75,6 @@
                     if (pageObject[index]) {
                         self.GET(SONNY.PAGEPATH + data[key], function(resp) {
 
-                            self.CURRENTRENDER = data[key];
-
                             var compiler = new SONNY.Compiler(self);
 
                             var DOM = compiler.DOM(resp);
@@ -111,8 +109,6 @@
 
         var self = this;
 
-        var includes = 0;
-
         var pageObject = object;
 
         var _initialize = function(data) {
@@ -134,10 +130,9 @@
                     object[ii] = _inherit(object[ii]);
                     if (object[ii].key && object[ii].key === "include") {
                         pageObject.includes++;
-                        var result = _inherit(self.renderer.get(object[ii].page + SONNY.FILETYPE).content).reverse();
-                        for (var kk = 0; kk < result.length; ++kk) {
-                            object.splice(ii, 0, result[kk]);
-                        }
+                        var result = _inherit(self.renderer.get(object[ii].page + SONNY.FILETYPE)).content;
+                        object.splice(ii, 1);
+                        object.splice.apply(_inherit(object), [ii, 0].concat(result));
                     }
                 }
             }
@@ -337,6 +332,7 @@
                 element = this.addListeners(element, this.LOAD);
             } else {
                 element.addEventListener('click', function() {
+                    self.instance.__instance.CURRENTPAGE = element.attributes[self.LOAD].value + SONNY.FILETYPE;
                     self.instance.render(element.attributes[self.LOAD].value + SONNY.FILETYPE);
                 });
             }
@@ -407,7 +403,6 @@
     SONNY.Renderer.prototype.kill = function(page) {
         if (this.__instance.BODY) {
             this.__instance.BODY.innerHTML = "";
-            this.__instance.CURRENTPAGE = null;
         }
     };
 
