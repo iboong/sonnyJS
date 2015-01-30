@@ -1,5 +1,5 @@
 /**
- * sonnyJS v0.0.6
+ * sonnyJS v0.0.7
  * www.github.com/felixmaier/sonnyJS
  * @author Felix Maier
  */
@@ -15,7 +15,7 @@
 
     var SONNY = SONNY || {};
 
-    SONNY.VERSION = "0.0.6";
+    SONNY.VERSION = "0.0.7";
 
     SONNY.INITIALIZED = false;
 
@@ -75,8 +75,6 @@
                     if (pageObject[index]) {
                         self.GET(SONNY.PAGEPATH + data[key], function(resp) {
 
-                            self.CURRENTRENDER = data[key];
-
                             var compiler = new SONNY.Compiler(self);
 
                             var DOM = compiler.DOM(resp);
@@ -90,7 +88,7 @@
                             delete DOMOBJECT.inside;
 
                             pageObject[index][data[key]] = new SONNY.Page(DOMOBJECT);
-                            
+
                             --loadedPages;
                             if (loadedPages <= 0) {
                                 resolve(pageObject);
@@ -107,44 +105,42 @@
      * Check for inheritance
      * @param: object (SONNY.Page object)
      */
-    SONNY.Virtualiser.prototype.Inheritance = function(object, resolve) {
+    SONNY.Virtualiser.prototype.Inheritance = function(object) {
 
         var self = this;
 
-        var counter = 0;
+        var pageObject = object;
 
-        var originalObject = object;
-
-        var array = [];
-
-        var _resolve = function(data, original) {
-            if (typeof data === 'object') {
-                if (data.path) {
-                    var originalPath = data.path;
-                    data.path = data.path.split("/");
-                    original = original[data.path[0]][originalPath];
-                }
-                if (data && data.key === "include") {
-                    counter++;
-                    original.includes++;
-                    if (!data.page) throw new Error("Include requires an page attribute!");
-                    var includedContent = self.renderer.get(data.page + SONNY.FILETYPE).content;
-                    _goBack(includedContent, original);
-                }
-                for (var ii in data) {
-                    _resolve(data[ii], original);
+        var _initialize = function(data) {
+            for (var ii in data) {
+                if (typeof data[ii] === 'object') {
+                    _initialize(data[ii]);
+                    if (data.content) { 
+                        pageObject = data;
+                        data.content = _inherit(data.content);
+                    }
                 }
             }
+            return data;
         };
 
-        var _goBack = function(data, path) {
-            
+        var _inherit = function(object) {
+            for (var ii in object) {
+                if (typeof object[ii] === "object") {
+                    object[ii] = _inherit(object[ii]);
+                    if (object[ii].key && object[ii].key === "include") {
+                        pageObject.includes++;
+                        var result = _inherit(self.renderer.get(object[ii].page + SONNY.FILETYPE)).content;
+                        object.splice(ii, 1);
+                        object.splice.apply(_inherit(object), [ii, 0].concat(result));
+                    }
+                }
+            }
+            return object;
         };
 
-        _resolve(object, originalObject);
+        return _initialize(pageObject);
 
-        return object;
-        
     };
 
     /**
@@ -263,42 +259,44 @@
 
         var _compile = function(data) {
 
-            if (!data) throw new Error("Received invalid data");
-
+            if (data.key !== "include") {
             for (var key in data) {
-                    if (key === "key") {
-                        element = document.createElement(data.key);
-                    } else if (key === "text") {
-                        element.innerHTML = data.text;
-                    } else {
-                        if (key === "inside") {
-                            if (data.inside) {
-                                for (var ii = 0; ii < data.inside.length; ++ii) {
-                                    var insideElements = self.JSON(data.inside[ii]);
-                                    for (var ll in insideElements) {
-                                        element.appendChild(insideElements[ll]);
-                                    }
+                
+                if (key === "key") {
+                    element = document.createElement(data.key);
+                } else if (key === "text") {
+                    element.innerHTML = data.text;
+                } else {
+                    if (key === "inside") {
+                        if (data.inside) {
+                            for (var ii = 0; ii < data.inside.length; ++ii) {
+                                var insideElements = self.JSON(data.inside[ii]);
+                                for (var ll in insideElements) {
+                                    element.appendChild(insideElements[ll]);
                                 }
                             }
-                        } else {
-                            try {
-                                // Don't render backups
-                                if (element && key !== "backup") element.setAttribute(key, data[key]);
-                            } catch (e) {
-                                throw new Error("JSON rendering failed: " + e);
-                            }
+                        }
+                    } else {
+                        try {
+                            // Don't render backups
+                            if (element && key !== "backup") element.setAttribute(key, data[key]);
+                        } catch (e) {
+                            throw new Error("JSON rendering failed: " + e);
                         }
                     }
+                }
             }
 
             element = new SONNY.Vivifier(self.instance).vivify(element);
 
             array.push(element);
+            
+            }
 
         };
 
         _compile(data);
-        
+
         return array;
     };
 
@@ -334,6 +332,7 @@
                 element = this.addListeners(element, this.LOAD);
             } else {
                 element.addEventListener('click', function() {
+                    self.instance.__instance.CURRENTPAGE = element.attributes[self.LOAD].value + SONNY.FILETYPE;
                     self.instance.render(element.attributes[self.LOAD].value + SONNY.FILETYPE);
                 });
             }
@@ -387,7 +386,7 @@
         this.page = this.get(page);
 
         this.__instance.CURRENTPAGE = page;
-        
+
         this.__instance.INCLUDES = [];
 
         var result = this.compile(this.page);
@@ -404,7 +403,6 @@
     SONNY.Renderer.prototype.kill = function(page) {
         if (this.__instance.BODY) {
             this.__instance.BODY.innerHTML = "";
-            this.__instance.CURRENTPAGE = null;
         }
     };
 
@@ -477,11 +475,11 @@
                 }
             }
         }
-        
+
         for (var key in page) {
             _fetch(page[key]);
         }
-        
+
         return result;
     };
 
@@ -670,7 +668,8 @@ var SonnyPages = {};
         'public/login.html',
         'public/register.html',
         'public/github.html',
-        'public/github2.html'
+        'public/github2.html',
+        'public/github3.html'
     ];
     // Pages for logged in users
     SonnyPages.private = [
