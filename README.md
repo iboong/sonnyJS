@@ -1,10 +1,12 @@
 # sonnyJS
 
-Started recode @17.01.2015
-sonnyJS is currently in an unusable state!
-
 ### What is sonnyJS?
 
-SonnyJS is a single library which dramatically recudes traffic as all pages get preloaded on the first visit and compiled into virtual page objects.
+SonnyJS is a minimalist Javascript library, designed to help developers and designers to create stunning single page websites. Sonny brings many beginner friendly features to improve websites appearance, reduce traffic and dramatically speed up everything.
+You don't have to be an expert to use sonnyJS.
 
-An own templating language, page inheritance and much more great stuff will let your project shine.
+Live example:
+www.sonnyjs.org
+
+Docs, examples, minified downloads:
+www.sonnyjs.org/doc
