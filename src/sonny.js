@@ -4,8 +4,7 @@
  * @author Felix Maier
  */
 
-(function() {
-    'use strict'
+(function() { 'use strict'
 
     var $ = function() {
         return document.querySelector(arguments[0]);
@@ -128,7 +127,7 @@
             for (var ii in object) {
                 if (typeof object[ii] === "object") {
                     object[ii] = _inherit(object[ii]);
-                    if (object[ii].key && object[ii].key === "include") {
+                    if (object[ii].key && object[ii].key === "syinclude") {
                         pageObject.includes++;
                         var result = _inherit(self.renderer.get(object[ii].page + SONNY.FILETYPE)).content;
                         object.splice(ii, 1);
@@ -259,7 +258,7 @@
 
         var _compile = function(data) {
 
-            if (data.key !== "include") {
+            if (data.key !== "syinclude") {
             for (var key in data) {
                 
                 if (key === "key") {
@@ -658,36 +657,3 @@
 
 
 }).call(this);
-
-
-(function() {
-
-var SonnyPages = {};
-    // Pages for guests
-    SonnyPages.public = [
-        'public/login.html',
-        'public/register.html',
-        'public/github.html',
-        'public/github2.html',
-        'public/github3.html'
-    ];
-    // Pages for logged in users
-    SonnyPages.private = [
-        'private/home.html',
-        'private/settings.html'
-    ];
-
-    // Define settings here
-    SonnyPages.Settings = {
-        //startpage: "public/register.html",
-        pagecontainer: "syContainer",
-        online: false
-    }
-
-    var instance = new SONNY.Instance(SonnyPages, function() {
-        // Do anything you want here
-        var renderer = new SONNY.Renderer(instance);
-            renderer.render("public/login.html");
-    });
-
-})();
