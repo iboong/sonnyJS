@@ -2,11 +2,13 @@
 
 ### What is sonnyJS?
 
-SonnyJS is a minimalist Javascript library, designed to help developers and designers to create stunning single page websites. Sonny brings many beginner friendly features to improve websites appearance, reduce traffic and dramatically speed up everything.
+SonnyJS is a minimalist Javascript library, designed to help developers and designers to create stunning single page websites. Sonny brings many useful features to improve websites appearance, reduce traffic, produce clean structured website templates and dramatically speed up everything.
 You don't have to be an expert to use sonnyJS.
 
 Live example:
-www.sonnyjs.org
+www.sonnyjs.org/demo
 
 Docs, examples, minified downloads:
-www.sonnyjs.org/doc
+www.sonnyjs.org
+
+![Screenshot](demo.gif)
