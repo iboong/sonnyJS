@@ -56,7 +56,7 @@
 
         var self = this;
 
-        var pageObject = new Object,
+        var page = {},
             loadedPages = 0;
 
         var _virtualise = function(data, index) {
@@ -66,12 +66,15 @@
                 }
                 if (data[key] instanceof Object) {
                     if (self.VIRTUALPAGES[key]) {
-                        pageObject[key] = {};
+                        page[key] = {};
                         _virtualise(data[key], key);
                     }
                 } else {
-                    if (pageObject[index]) {
+                    if (page[index]) {
                         self.GET(SONNY.PAGEPATH + data[key], function(resp) {
+
+                            if (page[index][data[key]]) 
+                            throw new Error("Multiple definition of " + page[index][data[key]].path + "!");
 
                             var compiler = self.compiler;
 
@@ -85,11 +88,11 @@
 
                             delete DOMOBJECT.inside;
 
-                            pageObject[index][data[key]] = new SONNY.Page(DOMOBJECT);
+                            page[index][data[key]] = new SONNY.Page(DOMOBJECT);
 
                             --loadedPages;
                             if (loadedPages <= 0) {
-                                resolve(pageObject);
+                                resolve(page);
                             }
                         });
                     }
@@ -565,7 +568,7 @@
                 }
             }
             delete object.Settings;
-        } else throw new Error("No settings defined!");
+        }
     };
 
     /**
