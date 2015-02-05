@@ -11,5 +11,3 @@ www.sonnyjs.org/demo
 
 Docs, examples, minified downloads:
 www.sonnyjs.org
-
-![Screenshot](demo.gif)
