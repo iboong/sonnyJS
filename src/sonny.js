@@ -1,5 +1,5 @@
 /**
- * sonnyJS v0.0.7
+ * sonnyJS v0.0.8
  * www.github.com/felixmaier/sonnyJS
  * @author Felix Maier
  */
@@ -34,9 +34,8 @@
 
         if (!SONNY.LOADED) {
             this.init(this.VIRTUALPAGES, function(result) {
-                self.renderer = new SONNY.Renderer(self);
                 self.PAGES = result;
-                self.PAGES = self.Inheritance(result);
+                self.PAGES = self.interpreter.Includes(result);
                 SONNY.LOADED = true;
                 resolve();
                 if (self.STARTPAGE) {
@@ -74,7 +73,7 @@
                     if (pageObject[index]) {
                         self.GET(SONNY.PAGEPATH + data[key], function(resp) {
 
-                            var compiler = new SONNY.Compiler(self);
+                            var compiler = self.compiler;
 
                             var DOM = compiler.DOM(resp);
 
@@ -98,48 +97,6 @@
             });
         };
         _virtualise(this.VIRTUALPAGES);
-    };
-
-    /**
-     * Check for inheritance
-     * @param: object (SONNY.Page object)
-     */
-    SONNY.Virtualiser.prototype.Inheritance = function(object) {
-
-        var self = this;
-
-        var pageObject = object;
-
-        var _initialize = function(data) {
-            for (var ii in data) {
-                if (typeof data[ii] === 'object') {
-                    _initialize(data[ii]);
-                    if (data.content) { 
-                        pageObject = data;
-                        data.content = _inherit(data.content);
-                    }
-                }
-            }
-            return data;
-        };
-
-        var _inherit = function(object) {
-            for (var ii in object) {
-                if (typeof object[ii] === "object") {
-                    object[ii] = _inherit(object[ii]);
-                    if (object[ii].key && object[ii].key === "syinclude") {
-                        pageObject.includes++;
-                        var result = _inherit(self.renderer.get(object[ii].page + SONNY.FILETYPE)).content;
-                        object.splice(ii, 1);
-                        object.splice.apply(_inherit(object), [ii, 0].concat(result));
-                    }
-                }
-            }
-            return object;
-        };
-
-        return _initialize(pageObject);
-
     };
 
     /**
@@ -185,20 +142,61 @@
      */
     SONNY.Interpreter = function() {
 
-        this.instance = this;
-
-        if (arguments[0]) this.instance = arguments[0];
+        if (arguments[0]) this.__instance = arguments[0];
 
     };
-    
+
+    SONNY.Interpreter.prototype.constructor = SONNY.Interpreter;
+
+
+    /**
+     * Finds include keys in objects
+     * Replace include element with virtual sonny page content
+     * @param object (object) sonny page object
+     */
+    SONNY.Interpreter.prototype.Includes = function(object) {
+
+        var self = this;
+
+        var pageObject = object;
+
+        var _initialize = function(data) {
+            for (var ii in data) {
+                if (typeof data[ii] === 'object') {
+                    _initialize(data[ii]);
+                    if (data.content) { 
+                        pageObject = data;
+                        data.content = _inherit(data.content);
+                    }
+                }
+            }
+            return data;
+        };
+
+        var _inherit = function(object) {
+            for (var ii in object) {
+                if (typeof object[ii] === "object") {
+                    object[ii] = _inherit(object[ii]);
+                    if (object[ii].key && object[ii].key === "syinclude") {
+                        pageObject.includes++;
+                        var result = _inherit(self.__instance.renderer.get(object[ii].page + SONNY.FILETYPE)).content;
+                        object.splice(ii, 1);
+                        object.splice.apply(_inherit(object), [ii, 0].concat(result));
+                    }
+                }
+            }
+            return object;
+        };
+
+        return _initialize(pageObject);
+    }
+
     /**
      * Compiler to virtualise html and render objects
      */
     SONNY.Compiler = function() {
 
-        this.instance = this;
-
-        if (arguments[0]) this.instance = arguments[0];
+        if (arguments[0]) this.__instance = arguments[0];
 
     };
 
@@ -209,9 +207,9 @@
      * @param html (string)
      */
     SONNY.Compiler.prototype.DOM = function(html) {
-        this.HTMLDOM = document.implementation.createHTMLDocument("html");
-        this.HTMLDOM.documentElement.innerHTML = html;
-        return this.HTMLDOM.body.children[0];
+        var HTMLDOM = document.implementation.createHTMLDocument("html");
+            HTMLDOM.documentElement.innerHTML = html;
+        return HTMLDOM.body.children[0];
     };
 
     /**
@@ -286,7 +284,7 @@
                 }
             }
 
-            element = new SONNY.Vivifier(self.instance).vivify(element);
+            element = new SONNY.Vivifier(self.__instance).vivify(element);
 
             array.push(element);
             
@@ -319,20 +317,20 @@
 
         var self = this;
 
-        this.LOAD = "sy-load";
-        this.MINMAX = "sy-min-max";
-        this.ACTION = "sy-action";
-        this.IMAGE = "sy-image";
+        var LOAD = "sy-load";
+        var MINMAX = "sy-min-max";
+        var ACTION = "sy-action";
+        var IMAGE = "sy-image";
 
         if (!element) throw new Error("Invalid element type!");
 
-        if (element.attributes[this.LOAD]) {
-            if (element.attributes[this.LOAD].value.match(":")) {
-                element = this.addListeners(element, this.LOAD);
+        if (element.attributes[LOAD]) {
+            if (element.attributes[LOAD].value.match(":")) {
+                element = this.addListeners(element, LOAD);
             } else {
                 element.addEventListener('click', function() {
-                    self.instance.__instance.CURRENTPAGE = element.attributes[self.LOAD].value + SONNY.FILETYPE;
-                    self.instance.render(element.attributes[self.LOAD].value + SONNY.FILETYPE);
+                    self.instance.__instance.CURRENTPAGE = element.attributes[LOAD].value + SONNY.FILETYPE;
+                    self.instance.render(element.attributes[LOAD].value + SONNY.FILETYPE);
                 });
             }
         }
@@ -385,8 +383,6 @@
         this.page = this.get(page);
 
         this.__instance.CURRENTPAGE = page;
-
-        this.__instance.INCLUDES = [];
 
         var result = this.compile(this.page);
 
@@ -516,6 +512,12 @@
         this.resize();
 
         this.BODY = $(this.PAGECONTAINER) || null;
+        
+        this.renderer = new SONNY.Renderer(this);
+        
+        this.interpreter = new SONNY.Interpreter(this);
+        
+        this.compiler = new SONNY.Compiler(this);
 
         this.createContainer(function() {
             SONNY.INITIALIZED = true;
