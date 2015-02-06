@@ -16,14 +16,14 @@
     };
 
     /**
-     * Namespace-class for
+     * Static namespace-class for sonnyJS
      */
     var SONNY = SONNY || {};
 
     /**
      * Version of sonny
      */
-    SONNY.VERSION = "0.0.7";
+    SONNY.VERSION = "0.0.8";
 
     /**
      * Default page path where sonny templates are stored
@@ -615,6 +615,11 @@
          * to prevent multiple sonny instances
          */
         if (++SONNY.INITIALIZED > !false) throw new Error("Cannot run multiple sonny instances!");
+        
+        /**
+         * Displays a (chrome specific) message in the console
+         */
+        this.Greet();
 
         /**
          * Store myself in a variable to be visible in async operations
@@ -775,6 +780,23 @@
     };
 
     /**
+     * Displays a hello message in the console
+     * and a special message in chrome browsers
+     */
+    SONNY.Instance.prototype.Greet = function() {
+        if ( navigator.userAgent.toLowerCase().indexOf('chrome') > -1 ) {
+            var args = [
+                '%c sonny.js ' + SONNY.VERSION + ' ->%c http://www.sonnyjs.org/ ',
+                'color: #d9d9d9; background: #000',
+                'background: #000'
+            ];
+            console.log.apply(console, args);
+        } else if (window['console']) {
+            console.log('sonny.js ' + SONNY.VERSION + ' -> http://www.sonnyjs.org/');
+        }
+    };
+
+    /**
      * Mobile device detection
      */
     SONNY.Instance.prototype.isMobile = function() {
@@ -803,28 +825,6 @@
             self.HEIGHT = window.innerHeight;
             window.scrollTo(0, 0);
         });
-    };
-
-
-    /**
-     * Cross browser ajax request
-     */
-    SONNY.GET = function() {
-        var activexmodes = ['Msxml2.XMLHTTP.6.0', 'Msxml2.XMLHTTP.3.0', 'Microsoft.XMLHTTP'];
-
-        if (window.ActiveXObject) { //Support for ActiveXObject in IE first (as XMLHttpRequest in IE7 is broken)
-            for (var ii = 0; ii < activexmodes.length; ++ii) {
-                try {
-                    return new window.ActiveXObject(activexmodes[ii]);
-                } catch (e) {
-                    throw new Error(e);
-                }
-            }
-        } else if (window.XMLHttpRequest) {
-            return new window.XMLHttpRequest();
-        } else {
-            return false;
-        }
     };
 
     /**
@@ -856,6 +856,27 @@
             this.FULLSCREEN = false;
         }
         return this.FULLSCREEN;
+    };
+
+    /**
+     * Cross browser ajax request
+     */
+    SONNY.GET = function() {
+        var activexmodes = ['Msxml2.XMLHTTP.6.0', 'Msxml2.XMLHTTP.3.0', 'Microsoft.XMLHTTP'];
+
+        if (window.ActiveXObject) { //Support for ActiveXObject in IE first (as XMLHttpRequest in IE7 is broken)
+            for (var ii = 0; ii < activexmodes.length; ++ii) {
+                try {
+                    return new window.ActiveXObject(activexmodes[ii]);
+                } catch (e) {
+                    throw new Error(e);
+                }
+            }
+        } else if (window.XMLHttpRequest) {
+            return new window.XMLHttpRequest();
+        } else {
+            return false;
+        }
     };
 
     // Prevent multiple sonny instances
