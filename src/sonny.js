@@ -6,27 +6,50 @@
 
 (function() { 'use strict'
 
+    var root = this;
+
+    /**
+     * Shorten document.querySelector()
+     */
     var $ = function() {
         return document.querySelector(arguments[0]);
     };
 
-    var root = this;
-
+    /**
+     * Namespace-class for
+     */
     var SONNY = SONNY || {};
 
+    /**
+     * Version of sonny
+     */
     SONNY.VERSION = "0.0.7";
 
-    SONNY.INITIALIZED = false;
-
+    /**
+     * Default page path where sonny templates are stored
+     */
     SONNY.PAGEPATH = "view/";
 
+    /**
+     * Filetype sonny has to process
+     */
     SONNY.FILETYPE = ".html";
+    
+    /**
+     * Counts initialized sonny instances
+     */
+    SONNY.INITIALIZED = 0;
 
+    /**
+     * Displays current sonny version in the console
+     */
     SONNY.SHOWVERSION = false;
 
     /**
      * Manages all virtual pages
-     * @methods add, remove, init
+     * Get each unvirtualized page from the sonny instance
+     * Get each page file and virtualize it
+     * Callback after everything got loaded and stored successfully
      */
     SONNY.Virtualiser = function(resolve) {
 
@@ -183,7 +206,7 @@
                     if (object[ii].key && object[ii].key === "syinclude") {
                         pageObject.includes++;
                         var result = _inherit(self.__instance.renderer.get(object[ii].page + SONNY.FILETYPE)).content;
-                        object.splice(ii, 1);
+                        object.splice(ii, !false);
                         object.splice.apply(_inherit(object), [ii, 0].concat(result));
                     }
                 }
@@ -238,7 +261,7 @@
             }
 
             while (child) {
-                if (child.nodeType === 1 && child.nodeName !== 'SCRIPT') {
+                if (child.nodeType === 1) {
                     virtualPage.inside.push(this.HTML(child));
                 }
                 child = child.nextSibling;
@@ -366,9 +389,9 @@
     /**
      * Render a virtual page
      */
-    SONNY.Renderer = function(instance) {
+    SONNY.Renderer = function() {
 
-        this.__instance = instance || this;
+        if (arguments[0]) this.__instance = arguments[0];
 
     };
 
@@ -397,6 +420,7 @@
 
     /**
      * @param page (string) : public/home
+     * Clean the sonny instance page container for new content
      */
     SONNY.Renderer.prototype.kill = function(page) {
         if (this.__instance.BODY) {
@@ -424,7 +448,7 @@
     };
 
     /**
-     * Parse html to the page container
+     * Parse dom html to the page container
      * @param page (html)
      */
     SONNY.Renderer.prototype.attach = function(page) {
@@ -482,50 +506,228 @@
     };
 
     /**
+     * Extends notification api
+     */
+    SONNY.Notifications = function() {
+
+        if (arguments[0]) this.__instance = arguments[0];
+
+        if (!("Notification" in window)) return;
+
+        this.notifySupport = true;
+
+        this.notification = null;
+
+        this.permission = Notification.permission;
+
+    };
+
+    SONNY.Notifications.prototype.constructor = SONNY.Notifications;
+
+
+    /**
+     * Display a desktop notification
+     * @param object (object) *object.title
+     */
+    SONNY.Notifications.prototype.show = function(object) {
+
+        if (!this.notifySupport) return;
+
+        if (this.permission === "granted") {
+            if (typeof object !== 'object') return;
+
+            /**
+             * A title is necessary to define!
+             */
+            this.notification = new Notification(object.title, {
+                tag: object.tag ? object.tag : null,
+                body: object.message ? object.message : null,
+                iconUrl: object.iconUrl ? object.iconUrl : null,
+                icon: object.icon ? object.icon : null
+            });
+
+        } else if (this.permission !== 'denied') {
+            this.getPermission(object);
+        }
+    };
+
+    /**
+     * Ask user for permission to display desktop notifications
+     * @param object (object)
+     */
+    SONNY.Notifications.prototype.getPermission = function(object) {
+        Notification.requestPermission(function (permission) {
+            if (permission === "granted") {
+                this.show(object);
+            }
+        });
+    };
+
+    /**
+     * Connection over socket.io
+     */
+    SONNY.Connection = function() {
+
+        if (!window.io) return;
+
+        if (arguments[0]) this.__instance = arguments[0];
+        else throw new Error("SONNY.Connection requires an instance!");
+
+        this.connected = false;
+
+        this.init();
+
+    };
+
+    SONNY.Connection.prototype.constructor = SONNY.Connection;
+    
+    /**
+     * Initialize an connection
+     * Dsiplay a notification after connected successfully
+     */
+    SONNY.Connection.prototype.init = function() {
+
+        this.socket = io( window.location.host + ":" + this.__instance.CONNECTIONPORT );
+
+        this.connected = true;
+
+        this.__instance.ONLINE = true;
+
+        this.notifications = this.__instance.notify;
+
+        this.notifications.show({
+            title: "SONNY.Connection",
+            message: "Connection established!",
+            icon: "http://sonnyjs.org/favicon-96x96.png"
+        });
+
+    };
+
+
+    /**
+     * A instance represents the core of a website session.
      * @param Page/settings object
      */
     SONNY.Instance = function(object, resolve) {
 
+        /**
+         * Increase global sonny initialized counter
+         * to prevent multiple sonny instances
+         */
+        if (++SONNY.INITIALIZED > !false) throw new Error("Cannot run multiple sonny instances!");
+
+        /**
+         * Store myself in a variable to be visible in async operations
+         */
         var self = this;
 
-        if (SONNY.INITIALIZED) throw new Error("Cannot run multiple sonny instances");
-
+        /**
+         * Clone this instance
+         */
         this.INSTANCE = this;
 
+        /**
+         * If defined, a value will be rendered automatically after everything has loaded successfully
+         */
         this.STARTPAGE = null;
 
+        /**
+         * The element container where a page get rendered into
+         */
         this.PAGECONTAINER = "syContainer";
 
+        /**
+         * The current page a user is located
+         */
         this.CURRENTPAGE = null;
 
+        /**
+         * The current window width
+         */
         this.WIDTH = window.innerWidth;
 
+        /**
+         * The current window height
+         */
         this.HEIGHT = window.innerHeight;
 
+        /**
+         * Is sonny in fullscreen mode or not?
+         */
         this.FULLSCREEN = false;
 
+        /**
+         * A socket io connection has successfully established
+         */
         this.ONLINE = false;
 
+        /**
+         * Either the user wants a socket io connection or not
+         * Can be changed by the settings instance param
+         */
+        this.CONNECTION = false;
+
+        /**
+         * Default sonny socket io connection port
+         * Can be changed by the settings instance param
+         */
+        this.CONNECTIONPORT = 9005;
+
+        /**
+         * Overwrite local instance settings by users's instance settings object
+         */
         this.processSettings(object);
 
+        /**
+         * Save all unvirtualized pages
+         */
         this.VIRTUALPAGES = object;
 
+        /**
+         * either on a mobile platform or os
+         */
         this.isMobile();
 
+        /**
+         * Update local instance size settings
+         */
         this.resize();
 
+        /**
+         * Check if we already have access to the page parse container
+         */
         this.BODY = $(this.PAGECONTAINER) || null;
-        
-        this.renderer = new SONNY.Renderer(this);
-        
-        this.interpreter = new SONNY.Interpreter(this);
-        
-        this.compiler = new SONNY.Compiler(this);
 
+        /**
+         * Local renderer to render virtualized pages
+         * @param this instance
+         */
+        this.renderer = new SONNY.Renderer(this);
+
+        /**
+         * Local interpreter to interpret virtualized page objects
+         * @param this instance
+         */
+        this.interpreter = new SONNY.Interpreter(this);
+
+        /**
+         * Local compiler to virtualize HTML pages
+         */
+        this.compiler = new SONNY.Compiler(this);
+        
+        /**
+         * Local notifications
+         */
+        this.notify = new SONNY.Notifications();
+
+        /**
+         * Create a page container if not already existing
+         * Call virtualiser after successfully preparing the page container
+         */
         this.createContainer(function() {
-            SONNY.INITIALIZED = true;
             SONNY.Virtualiser.call(self, function() {
                 resolve();
+                self.CONNECTION ? self.CONNECTION = new SONNY.Connection(self) : null;
             });
         });
 
@@ -538,6 +740,7 @@
 
     /**
      * Create the page container
+     * Wait for the lazy slow document
      */
     SONNY.Instance.prototype.createContainer = function(resolve) {
         var self = this;
@@ -563,7 +766,7 @@
                 if (object.Settings[ii] === null || object.Settings[ii] === undefined) throw new Error(ii + " value is invalid");
                 var original = ii;
                 ii = String(ii.toUpperCase());
-                if (this[ii] || this[ii] === null) {
+                if (this[ii] !== undefined || this[ii] === null) {
                     this[ii] = object.Settings[original];
                 }
             }
@@ -589,7 +792,7 @@
     };
 
     /**
-     * Cross browser ajax request
+     * Listens for a window resize, updates instance variables on resizement
      */
     SONNY.Instance.prototype.resize = function() {
 
@@ -656,9 +859,8 @@
     };
 
     // Prevent multiple sonny instances
-    if (window.SONNY) throw new Error("Another instance of sonnyJS is already initialized!");
+    if (window.SONNY) throw new Error("SonnyJS was already declared in this scope!");
 
     root.SONNY = SONNY;
-
 
 }).call(this);
