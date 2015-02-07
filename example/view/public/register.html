@@ -1,49 +1,46 @@
 <app sy-siteName="Register">
-<div class="fs-form-wrap" id="fs-form-wrap">
-        <div class="fs-title">
-            <h1>Sign Up</h1>
-        </div>
-        <form autocomplete="off" class="fs-form fs-form-full">
-			<input style="display:none" type="text"/>
-			<input style="display:none" type="password"/>
-            <ol class="fs-fields">
-                <li class="fs-current">
-					<span class="input input--isao">
-						<input class="input__field input__field--isao" sy-min-max="3,6" name="username" type="text" />
-						<label class="input__label input__label--isao" data-content="Type in a username">
-							<span class="input__label-content input__label-content--isao">Username</span>
-						</label>
-					</span>
-					<br/>
-					<span class="input input--isao">
-						<input class="input__field input__field--isao" sy-min-max="3,6" name="email" type="text" />
-						<label class="input__label input__label--isao" data-content="Type in your email">
-							<span class="input__label-content input__label-content--isao">Email</span>
-						</label>
-					</span>
-					<br/>
-					<span class="input input--isao">
-						<input class="input__field input__field--isao" sy-min-max="3,6" name="password" type="password" />
-						<label class="input__label input__label--isao" data-content="Type in a password">
-							<span class="input__label-content input__label-content--isao">Password</span>
-						</label>
-					</span>
-					<br/>
-					<span class="input input--isao">
-						<input class="input__field input__field--isao" sy-min-max="3,6" name="password2" type="password" />
-						<label class="input__label input__label--isao" data-content="Confirm the password">
-							<span class="input__label-content input__label-content--isao">Confirm Password</span>
-						</label>
-					</span>
-                </li>
-            </ol>
-			<br/><br/>
-			<div class="morph-button morph-button-modal morph-button-modal-2 morph-button-fixed">
-				<button class="btn btn-1 btn-1c" type="button" sy-action="register" sy-action-values="username,email,password,password2">Sign Up</button>
+	<div class="trinity">
+
+	  <div class="t-1 header">
+		<div class="container">
+
+		  <span class="t-3-o-2 hello">
+			<img src="assets/img/logo.png" class="rotateIn animated" >
+			<h3>Your are on register.html</a></h3>
+		  </span>
+		</div>
+      </div>
+
+	  <div class="t-1 main zoomIn animated">
+		<div class="container">
+
+		  <syinclude page="public/navigation"></syinclude>
+
+		  <div class="t-1 more">
+		  
+			<div class="t-2">
+			  <img src="http://lorempixel.com/g/500/500/" alt="" />
 			</div>
-			<div class="morph-button morph-button-modal morph-button-modal-2 morph-button-fixed">
-				<button class="btn btn-1 btn-1c" type="button" sy-load="public/login" sy-action-values="username,password">Already have an account</button>
+
+			<div class="t-2">
+			
+			  <p>Your are on register.html</p>
+			
+			  <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Qui labore, quod? Laboriosam veritatis vel, dolorum quidem rem tempora dolorem necessitatibus vero laudantium libero nobis repudiandae ea eum quaerat obcaecati perspiciatis!</p>
+
+			  <blockquote>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Commodi, incidunt veritatis omnis sequi sint, tenetur quas ea atque et id tempore molestias architecto, vitae perferendis quae rem laborum eaque voluptas.</blockquote>
+
+			  <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Qui labore, quod? Laboriosam veritatis vel, dolorum quidem rem tempora dolorem necessitatibus vero laudantium libero nobis repudiandae ea eum quaerat obcaecati perspiciatis!</p>
 			</div>
-        </form>
-    </div>
+
+		  </div>
+
+		  <syinclude page="public/gallery"></syinclude>
+
+		</div>
+	  </div>
+
+	  <syinclude page="public/footer"></syinclude>
+
+	</div>
 </app>

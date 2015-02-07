@@ -5,9 +5,10 @@ var SonnyPages = {};
     SonnyPages.public = [
         'public/login.html',
         'public/register.html',
-        'public/github.html',
-        'public/github2.html',
-        'public/github3.html'
+        'public/header.html',
+        'public/footer.html',
+		'public/gallery.html',
+		'public/navigation.html'
     ];
     // Pages for logged in users
     SonnyPages.private = [
@@ -18,7 +19,7 @@ var SonnyPages = {};
     SonnyPages.Settings = {
         connection: true,
         connectionPort: 9005,
-        displaynotifications: true
+        displaynotifications: false
     }
 
     var instance = new SONNY.Instance(SonnyPages, function() {

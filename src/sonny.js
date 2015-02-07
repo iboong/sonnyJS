@@ -917,7 +917,6 @@
         window.addEventListener('resize', function() {
             self.WIDTH = window.innerWidth;
             self.HEIGHT = window.innerHeight;
-            window.scrollTo(0, 0);
         });
     };
 
@@ -958,7 +957,7 @@
     SONNY.GET = function() {
         var activexmodes = ['Msxml2.XMLHTTP.6.0', 'Msxml2.XMLHTTP.3.0', 'Microsoft.XMLHTTP'];
 
-        if (window.ActiveXObject) { //Support for ActiveXObject in IE first (as XMLHttpRequest in IE7 is broken)
+        if (window.ActiveXObject) {
             for (var ii = 0; ii < activexmodes.length; ++ii) {
                 try {
                     return new window.ActiveXObject(activexmodes[ii]);
