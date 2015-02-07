@@ -38,7 +38,7 @@
     /**
      * Check if browser history manipulation is avaible
      */
-    SONNY.HISTORY = window.history ? true : false;
+    SONNY.HISTORY = window.history && typeof window.onpopstate === 'object' ? true : false;
 
     /**
      * Save original host url
@@ -71,8 +71,15 @@
                 self.PAGES = self.interpreter.Includes(result);
                 SONNY.LOADED = true;
                 resolve();
+                /**
+                 * Automatically render the start page defined from the settings object
+                 */
                 if (self.STARTPAGE) {
                     self.renderer.render(self.STARTPAGE);
+                /**
+                 * Got adressbar parameters
+                 * Used to withstand on page refreshes
+                 */
                 } else if (self.history && self.history.additionalURL.length) {
                     self.renderer.render(self.history.additionalURL + SONNY.FILETYPE);
                 }
@@ -432,7 +439,7 @@
             this.attach(result[ii]);
         }
 
-        if (SONNY.HISTORY) {
+        if (SONNY.HISTORY && !arguments[1]) {
             this.__instance.history.update(this.__instance.CURRENTPAGE);
         }
 
@@ -617,6 +624,10 @@
 
         var self = this;
 
+        /**
+         * Handles successful connections
+         * Show a notification on success
+         */
         this.socket.on('connect', function() {
             self.notifications.show({
                 title: "SONNY.Connection",
@@ -625,7 +636,12 @@
             });
         });
 
+        /**
+         * Handles unsuccessful connections
+         * Show a notification on success
+         */
         this.socket.on('disconnect', function() {
+            self.socket.disconnect();
             self.notifications.show({
                 title: "SONNY.Connection",
                 message: "Connection closed!",
@@ -661,6 +677,8 @@
      */
     SONNY.HistoryManager.prototype.init = function() {
 
+        var self = this;
+
         this.originalURL = SONNY.ORIGINALHISTORY;
 
         var originalURL = SONNY.ORIGINALHISTORY;
@@ -677,13 +695,23 @@
                 }
             }
 
+        /**
+         * Extend default forward and back buttons
+         * Calls renderer with second param to avoid circular reference in history
+         */
+        window.onpopstate = function(event) {
+            if (event.state && event.state !== null) {
+                self.__instance.renderer.render(event.state, []);
+            }
+        };
+
     };
-    
+
     /**
      * Update the adressbar with received value
      */
     SONNY.HistoryManager.prototype.update = function(value) {
-        window.history.replaceState("", "", this.originalURL + "?" + value);
+        history.pushState(value, value, this.originalURL + "?" + value);
     };
 
 
@@ -886,7 +914,7 @@
             ];
             console.log.apply(console, args);
         } else if (window['console']) {
-            console.log('sonny.js ' + SONNY.VERSION + ' -> http://www.sonnyjs.org/');
+            console.info('sonny.js ' + SONNY.VERSION + ' -> http://www.sonnyjs.org/');
         }
     };
 

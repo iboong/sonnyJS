@@ -19,7 +19,7 @@ var SonnyPages = {};
     SonnyPages.Settings = {
         connection: true,
         connectionPort: 9005,
-        displaynotifications: false
+        displaynotifications: true
     }
 
     var instance = new SONNY.Instance(SonnyPages, function() {
