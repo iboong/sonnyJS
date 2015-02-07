@@ -15,17 +15,17 @@ var SonnyPages = {};
         'private/settings.html'
     ];
 
-    // Define settings here
     SonnyPages.Settings = {
-        //startpage: "public/register.html",
-        pagecontainer: "syContainer",
-        online: false
+        connection: true,
+        connectionPort: 9005,
+        displaynotifications: true
     }
 
     var instance = new SONNY.Instance(SonnyPages, function() {
-        // Do anything you want here
+        // Everything is synchronous here
         var renderer = new SONNY.Renderer(instance);
             renderer.render("public/login.html");
+
     });
 
 })();

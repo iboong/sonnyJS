@@ -1,5 +1,5 @@
 /**
- * sonnyJS v0.0.8
+ * sonnyJS v0.1.0
  * www.github.com/felixmaier/sonnyJS
  * @author Felix Maier
  */
@@ -23,7 +23,7 @@
     /**
      * Version of sonny
      */
-    SONNY.VERSION = "0.0.8";
+    SONNY.VERSION = "0.1.0";
 
     /**
      * Default page path where sonny templates are stored
@@ -34,7 +34,17 @@
      * Filetype sonny has to process
      */
     SONNY.FILETYPE = ".html";
-    
+
+    /**
+     * Check if browser history manipulation is avaible
+     */
+    SONNY.HISTORY = window.history ? true : false;
+
+    /**
+     * Save original host url
+     */
+    SONNY.ORIGINALHISTORY = window.location.href;
+
     /**
      * Counts initialized sonny instances
      */
@@ -63,6 +73,8 @@
                 resolve();
                 if (self.STARTPAGE) {
                     self.renderer.render(self.STARTPAGE);
+                } else if (self.history && self.history.additionalURL.length) {
+                    self.renderer.render(self.history.additionalURL + SONNY.FILETYPE);
                 }
             });
         }
@@ -355,7 +367,6 @@
                 element = this.addListeners(element, LOAD);
             } else {
                 element.addEventListener('click', function() {
-                    self.instance.__instance.CURRENTPAGE = element.attributes[LOAD].value + SONNY.FILETYPE;
                     self.instance.render(element.attributes[LOAD].value + SONNY.FILETYPE);
                 });
             }
@@ -398,15 +409,20 @@
     SONNY.Renderer.prototype.constructor = SONNY.Renderer;
 
     /**
+     * Render a page, attach it after successful compile
      * @param page (string) : public/home
      */
     SONNY.Renderer.prototype.render = function(page) {
 
-       var self = this;
+        var self = this;
+
+        if (page.match(".html")) {
+            page = page.split(".html")[0];
+        }
 
         if (!page instanceof String) throw new Error("Invalid page format!");
 
-        this.page = this.get(page);
+        this.page = this.get(page + SONNY.FILETYPE);
 
         this.__instance.CURRENTPAGE = page;
 
@@ -414,6 +430,10 @@
 
         for (var ii in result) {
             this.attach(result[ii]);
+        }
+
+        if (SONNY.HISTORY) {
+            this.__instance.history.update(this.__instance.CURRENTPAGE);
         }
 
     };
@@ -531,7 +551,7 @@
      */
     SONNY.Notifications.prototype.show = function(object) {
 
-        if (!this.notifySupport) return;
+        if (!this.notifySupport || !this.__instance.DISPLAYNOTIFICATIONS) return;
 
         if (this.permission === "granted") {
             if (typeof object !== 'object') return;
@@ -568,25 +588,13 @@
      */
     SONNY.Connection = function() {
 
-        if (!window.io) return;
+        if (!window.io) throw new Error("SonnyJS requires Socket.IO!");
 
         if (arguments[0]) this.__instance = arguments[0];
         else throw new Error("SONNY.Connection requires an instance!");
 
         this.connected = false;
-
-        this.init();
-
-    };
-
-    SONNY.Connection.prototype.constructor = SONNY.Connection;
-    
-    /**
-     * Initialize an connection
-     * Dsiplay a notification after connected successfully
-     */
-    SONNY.Connection.prototype.init = function() {
-
+        
         this.socket = io( window.location.host + ":" + this.__instance.CONNECTIONPORT );
 
         this.connected = true;
@@ -595,12 +603,87 @@
 
         this.notifications = this.__instance.notify;
 
-        this.notifications.show({
-            title: "SONNY.Connection",
-            message: "Connection established!",
-            icon: "http://sonnyjs.org/favicon-96x96.png"
+        this.init();
+
+    };
+
+    SONNY.Connection.prototype.constructor = SONNY.Connection;
+
+    /**
+     * Initialize an connection
+     * Display a notification after connected successfully
+     */
+    SONNY.Connection.prototype.init = function() {
+
+        var self = this;
+
+        this.socket.on('connect', function() {
+            self.notifications.show({
+                title: "SONNY.Connection",
+                message: "Connection established!",
+                icon: "http://sonnyjs.org/favicon-96x96.png"
+            });
         });
 
+        this.socket.on('disconnect', function() {
+            self.notifications.show({
+                title: "SONNY.Connection",
+                message: "Connection closed!",
+                icon: "http://sonnyjs.org/favicon-96x96.png"
+            });
+        });
+
+    };
+
+    /**
+     * Manipulates browser history and adressbar
+     * Used to bring back the feeling of non single page applications
+     */
+    SONNY.HistoryManager = function() {
+
+        if (arguments[0]) this.__instance = arguments[0];
+
+        if (!SONNY.HISTORY) return;
+
+        this.originalURL = "";
+
+        this.additionalURL = "";
+
+        this.init();
+
+    };
+
+    SONNY.HistoryManager.prototype.constructor = SONNY.HistoryManager;
+
+    /**
+     * Initialize the history manager
+     * Grab the current url and process additional question mark signs
+     */
+    SONNY.HistoryManager.prototype.init = function() {
+
+        this.originalURL = SONNY.ORIGINALHISTORY;
+
+        var originalURL = SONNY.ORIGINALHISTORY;
+
+        var regex = new RegExp("\\?", "g");
+            if (regex.test(originalURL)) {
+                var splittedURL = originalURL.split("?");
+                if (splittedURL[0] !== SONNY.ORIGINALHISTORY) {
+                    SONNY.ORIGINALHISTORY = splittedURL[0];
+                    this.originalURL = SONNY.ORIGINALHISTORY;
+                }
+                if (splittedURL.length) {
+                    this.additionalURL = splittedURL[1];
+                }
+            }
+
+    };
+    
+    /**
+     * Update the adressbar with received value
+     */
+    SONNY.HistoryManager.prototype.update = function(value) {
+        window.history.replaceState("", "", this.originalURL + "?" + value);
     };
 
 
@@ -615,11 +698,6 @@
          * to prevent multiple sonny instances
          */
         if (++SONNY.INITIALIZED > !false) throw new Error("Cannot run multiple sonny instances!");
-        
-        /**
-         * Displays a (chrome specific) message in the console
-         */
-        this.Greet();
 
         /**
          * Store myself in a variable to be visible in async operations
@@ -627,12 +705,17 @@
         var self = this;
 
         /**
+         * Displays a (chrome specific) message in the console
+         */
+        this.Greet();
+
+        /**
          * Clone this instance
          */
         this.INSTANCE = this;
 
         /**
-         * If defined, a value will be rendered automatically after everything has loaded successfully
+         * If defined, the page value will be rendered automatically after everything has loaded successfully
          */
         this.STARTPAGE = null;
 
@@ -679,6 +762,11 @@
         this.CONNECTIONPORT = 9005;
 
         /**
+         * Display sonnys notifications by default
+         */
+        this.DISPLAYNOTIFICATIONS = true;
+
+        /**
          * Overwrite local instance settings by users's instance settings object
          */
         this.processSettings(object);
@@ -689,7 +777,7 @@
         this.VIRTUALPAGES = object;
 
         /**
-         * either on a mobile platform or os
+         * Either on a mobile platform or os
          */
         this.isMobile();
 
@@ -723,7 +811,13 @@
         /**
          * Local notifications
          */
-        this.notify = new SONNY.Notifications();
+        this.notify = new SONNY.Notifications(this);
+
+        /**
+         * Simplifies the management of the browser history
+         * Manipulates the adressbar
+         */
+        this.history = new SONNY.HistoryManager(this);
 
         /**
          * Create a page container if not already existing
@@ -879,7 +973,6 @@
         }
     };
 
-    // Prevent multiple sonny instances
     if (window.SONNY) throw new Error("SonnyJS was already declared in this scope!");
 
     root.SONNY = SONNY;
