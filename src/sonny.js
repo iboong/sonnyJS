@@ -416,8 +416,8 @@
 
         var self = this;
 
-        if (page.match(".html")) {
-            page = page.split(".html")[0];
+        if (page.match(SONNY.FILETYPE)) {
+            page = page.split(SONNY.FILETYPE)[0];
         }
 
         if (!page instanceof String) throw new Error("Invalid page format!");
