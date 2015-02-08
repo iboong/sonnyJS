@@ -41,6 +41,11 @@
     SONNY.HISTORY = window.history && typeof window.onpopstate === 'object' ? true : false;
 
     /**
+     * Check if browser supports local storage
+     */
+    SONNY.LOCALSTORAGE = typeof(Storage) !== "undefined" || window.localStorage !== undefined ? true : false;
+
+    /**
      * Save original host url
      */
     SONNY.ORIGINALHISTORY = window.location.href;
@@ -583,9 +588,10 @@
      * @param object (object)
      */
     SONNY.Notifications.prototype.getPermission = function(object) {
+        var self = this;
         Notification.requestPermission(function (permission) {
             if (permission === "granted") {
-                this.show(object);
+                self.show(object);
             }
         });
     };
@@ -598,7 +604,7 @@
         if (!window.io) throw new Error("SonnyJS requires Socket.IO!");
 
         if (arguments[0]) this.__instance = arguments[0];
-        else throw new Error("SONNY.Connection requires an instance!");
+        else throw new Error("SONNY.Connection requires an instance parameter!");
 
         this.connected = false;
         
@@ -664,7 +670,7 @@
         this.originalURL = "";
 
         this.additionalURL = "";
-
+        
         this.init();
 
     };
@@ -714,6 +720,137 @@
         history.pushState(value, value, this.originalURL + "?" + value);
     };
 
+    /**
+     * Allows cross window communication
+     * Detects page crashes and allows communication between multiple opened windows
+     */
+    SONNY.StorageManager = function() {
+
+        if (arguments[0]) this.__instance = arguments[0];
+        else throw new Error("SONNY.StorageManager requires an instance parameter!");
+
+        if (!SONNY.LOCALSTORAGE) return;
+
+        this.StorageName = null;
+
+        this.Storage = null;
+
+        this.activeWindows = 0;
+
+        this.__instance.GLOBALKEYS = {};
+
+        this.EmptyStorageTemplate = { initialized: true };
+
+        this.init();
+
+    };
+
+    SONNY.StorageManager.prototype.constructor = SONNY.StorageManager;
+
+
+    /**
+     * Create a new global localstorage key
+     */
+    SONNY.StorageManager.prototype.init = function() {
+
+        var self = this;
+
+        this.StorageName = "SONNY::Instance::" + (new Date()).getTime();
+
+        /**
+         * Key does not exist yet
+         */
+        if (!localStorage[this.StorageName]) {
+            localStorage.setItem(this.StorageName, JSON.stringify(this.EmptyStorageTemplate));
+        }
+
+        this.Storage = JSON.parse(localStorage[this.StorageName]);
+
+        /**
+         * Make sure to delete old sonny keys
+         * Since beforeunload is not a safe method
+         */
+        for (var ii in localStorage) {
+            if (ii.match("SONNY::Instance::") && ii !== self.StorageName) {
+                localStorage.removeItem(ii);
+            }
+        }
+
+        /**
+         * Delete the current storage key
+         */
+        window.addEventListener('beforeunload', function(){
+            localStorage.removeItem(self.StorageName);
+        });
+
+        /**
+         * Listen for storage changes
+         * Update instance global keys on differences
+         */
+        window.addEventListener('storage', function(e) {
+            /**
+             * Update active window amount
+             */
+            self.countWindows();
+            /**
+             * Someone or something delete us o.O
+             * Recreate us
+             */
+            if (!localStorage[self.StorageName]) {
+                localStorage.setItem(self.StorageName, JSON.stringify(self.Storage));
+            }
+            /**
+             * Update local key from localstorage change
+             */
+            self.synchonize();
+        });
+
+    };
+    
+    /**
+     * Create a global key in the storage
+     */
+    SONNY.StorageManager.prototype.createKey = function(object) {
+        this.__instance.GLOBALKEYS[object.name] = object.data;
+        localStorage.setItem("SONNY::" + object.name, object.data);
+    };
+    
+    /**
+     * Delete a specific global key from the storage
+     */
+    SONNY.StorageManager.prototype.deleteKey = function(object) {
+        delete this.__instance.GLOBALKEYS[object.name];
+        localStorage.removeItem("SONNY::" + object.name);
+    };
+
+    /**
+     * Delete a specific global key from the storage
+     */
+    SONNY.StorageManager.prototype.synchonize = function() {
+        for (var ii in localStorage) {
+            if (ii.match("SONNY::") && !ii.match("SONNY::Instance")) {
+                if (this.__instance.GLOBALKEYS[ii.split("::")[1]]) { 
+                    this.__instance.GLOBALKEYS[ii.split("::")[1]] = localStorage[ii];
+                } else if (!this.__instance.GLOBALKEYS[ii.split("::")[1]]) { 
+                    this.__instance.GLOBALKEYS[ii.split("::")[1]] = localStorage[ii];
+                }
+            }
+        }
+    };
+
+    /**
+     * Count the amount of active sonny windows
+     * @return amount of windows
+     */
+    SONNY.StorageManager.prototype.countWindows = function() {
+        this.activeWindows = 0;
+        for (var ii in localStorage) {
+            if (ii.match("SONNY::Instance::")) {
+                this.activeWindows++;
+            }
+        }
+        return this.activeWindows;
+    };
 
     /**
      * A instance represents the core of a website session.
@@ -835,7 +972,7 @@
          * Local compiler to virtualize HTML pages
          */
         this.compiler = new SONNY.Compiler(this);
-        
+
         /**
          * Local notifications
          */
@@ -853,8 +990,18 @@
          */
         this.createContainer(function() {
             SONNY.Virtualiser.call(self, function() {
-                resolve();
+                /**
+                * Simplifies processes with local storage
+                */
+                self.localStorage = new SONNY.StorageManager(self);
+                /**
+                 * Initialize a new connection
+                 */
                 self.CONNECTION ? self.CONNECTION = new SONNY.Connection(self) : null;
+                /**
+                 * Let the developer know everything succeeded
+                 */
+                resolve();
             });
         });
 
