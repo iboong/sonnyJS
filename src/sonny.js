@@ -1,5 +1,5 @@
 /**
- * sonnyJS v0.1.0
+ * sonnyJS v0.1.2
  * www.github.com/felixmaier/sonnyJS
  * @author Felix Maier
  */
@@ -23,7 +23,7 @@
     /**
      * Version of sonny
      */
-    SONNY.VERSION = "0.1.0";
+    SONNY.VERSION = "0.1.2";
 
     /**
      * Default page path where sonny templates are stored
@@ -34,6 +34,11 @@
      * Filetype sonny has to process
      */
     SONNY.FILETYPE = ".html";
+
+    /**
+     * Sonny extension to differentiate
+     */
+    SONNY.STORAGE_EXT = "SONNY::";
 
     /**
      * Check if browser history manipulation is avaible
@@ -735,7 +740,7 @@
 
         this.Storage = null;
 
-        this.activeWindows = 0;
+        this.activeWindows = 1;
 
         this.__instance.GLOBALKEYS = {};
 
@@ -755,7 +760,9 @@
 
         var self = this;
 
-        this.StorageName = "SONNY::Instance::" + (new Date()).getTime();
+        this.synchonize();
+
+        this.StorageName = SONNY.STORAGE_EXT + "Instance::" + (new Date()).getTime();
 
         /**
          * Key does not exist yet
@@ -771,7 +778,7 @@
          * Since beforeunload is not a safe method
          */
         for (var ii in localStorage) {
-            if (ii.match("SONNY::Instance::") && ii !== self.StorageName) {
+            if (ii.match(SONNY.STORAGE_EXT + "Instance::") && ii !== self.StorageName) {
                 localStorage.removeItem(ii);
             }
         }
@@ -793,7 +800,7 @@
              */
             self.countWindows();
             /**
-             * Someone or something delete us o.O
+             * Someone or something deleted us o.O
              * Recreate us
              */
             if (!localStorage[self.StorageName]) {
@@ -806,29 +813,72 @@
         });
 
     };
+
+    /**
+     * Callback all global keys on a storage change
+     */
+    SONNY.StorageManager.prototype.onupdate = function(resolve) {
+
+        var self = this;
+
+        var storageObject = {};
+
+        window.addEventListener('storage', function() {
+            for (var ii in localStorage) {
+                if (ii.match(SONNY.STORAGE_EXT) && !ii.match(SONNY.STORAGE_EXT + "Instance")) {
+                    storageObject[ii.split("::")[1]] = localStorage[ii];
+                    resolve(storageObject);
+                }
+            } 
+        });
+    };
     
+    /**
+     * Check if key already exists in the storage
+     */
+    SONNY.StorageManager.prototype.keyExists = function(key) {
+        if (!this.__instance.GLOBALKEYS[key] && !localStorage[SONNY.STORAGE_EXT + key]) {
+            return false;
+        }
+        return true;
+    };
+
     /**
      * Create a global key in the storage
      */
     SONNY.StorageManager.prototype.createKey = function(object) {
-        this.__instance.GLOBALKEYS[object.name] = object.data;
-        localStorage.setItem("SONNY::" + object.name, object.data);
+        if (!this.keyExists(object.name)) {
+            this.__instance.GLOBALKEYS[object.name] = object.data;
+            localStorage.setItem(SONNY.STORAGE_EXT + object.name, object.data);
+        }
     };
-    
+   
     /**
      * Delete a specific global key from the storage
      */
     SONNY.StorageManager.prototype.deleteKey = function(object) {
         delete this.__instance.GLOBALKEYS[object.name];
-        localStorage.removeItem("SONNY::" + object.name);
+        localStorage.removeItem(SONNY.STORAGE_EXT + object.name);
+    };
+
+    /**
+     * Update a global key in the storage
+     */
+    SONNY.StorageManager.prototype.updateKey = function(object) {
+        if (this.keyExists(object.name)) {
+            this.__instance.GLOBALKEYS[object.name] = object.data;
+            localStorage.setItem(SONNY.STORAGE_EXT + object.name, object.data);
+        }
     };
 
     /**
      * Delete a specific global key from the storage
      */
     SONNY.StorageManager.prototype.synchonize = function() {
+        var storageObject = {};
         for (var ii in localStorage) {
-            if (ii.match("SONNY::") && !ii.match("SONNY::Instance")) {
+            if (ii.match(SONNY.STORAGE_EXT) && !ii.match(SONNY.STORAGE_EXT + "Instance")) {
+                storageObject[ii.split("::")[1]] = localStorage[ii];
                 if (this.__instance.GLOBALKEYS[ii.split("::")[1]]) { 
                     this.__instance.GLOBALKEYS[ii.split("::")[1]] = localStorage[ii];
                 } else if (!this.__instance.GLOBALKEYS[ii.split("::")[1]]) { 
@@ -836,6 +886,7 @@
                 }
             }
         }
+        return storageObject;
     };
 
     /**
@@ -845,7 +896,7 @@
     SONNY.StorageManager.prototype.countWindows = function() {
         this.activeWindows = 0;
         for (var ii in localStorage) {
-            if (ii.match("SONNY::Instance::")) {
+            if (ii.match(SONNY.STORAGE_EXT + "Instance::")) {
                 this.activeWindows++;
             }
         }
@@ -990,10 +1041,6 @@
          */
         this.createContainer(function() {
             SONNY.Virtualiser.call(self, function() {
-                /**
-                * Simplifies processes with local storage
-                */
-                self.localStorage = new SONNY.StorageManager(self);
                 /**
                  * Initialize a new connection
                  */
