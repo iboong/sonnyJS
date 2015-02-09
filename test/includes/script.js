@@ -1,7 +1,6 @@
 (function() {
 
-var SonnyPages = {};
-    SonnyPages.public = [
+    var SonnyPages = [
         'public/index.html',
 		'public/navigation.html',
 		'public/header.html',
@@ -15,7 +14,6 @@ var SonnyPages = {};
     }
 
     var instance = new SONNY.Instance(SonnyPages, function() {
-        // Everything is synchronous here!
         var renderer = new SONNY.Renderer(instance);
             renderer.render("public/index.html");
     });

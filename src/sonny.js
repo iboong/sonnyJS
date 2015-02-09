@@ -1,5 +1,5 @@
 /**
- * sonnyJS v0.1.2
+ * sonnyJS v0.1.3
  * www.github.com/felixmaier/sonnyJS
  * @author Felix Maier
  */
@@ -23,7 +23,7 @@
     /**
      * Version of sonny
      */
-    SONNY.VERSION = "0.1.2";
+    SONNY.VERSION = "0.1.3";
 
     /**
      * Default page path where sonny templates are stored
@@ -38,7 +38,7 @@
     /**
      * Sonny extension to differentiate
      */
-    SONNY.STORAGE_EXT = "SONNY::";
+    SONNY.STORAGE_EXT = "SY::";
 
     /**
      * Check if browser history manipulation is avaible
@@ -85,12 +85,14 @@
                  * Automatically render the start page defined from the settings object
                  */
                 if (self.STARTPAGE) {
-                    self.renderer.render(self.STARTPAGE);
+                    self.renderer.render(self.STARTPAGE);	
+				}
                 /**
                  * Got adressbar parameters
                  * Used to withstand on page refreshes
+                 * Don't render adressbar params if current page matches with it
                  */
-                } else if (self.history && self.history.additionalURL.length) {
+                else if (self.history && self.history.additionalURL.length && self.CURRENTPAGE !== self.history.additionalURL) {
                     self.renderer.render(self.history.additionalURL + SONNY.FILETYPE);
                 }
             });
@@ -108,50 +110,50 @@
 
         var self = this;
 
-        var page = {},
-            loadedPages = 0;
+        var page = {};
 
-        var _virtualise = function(data, index) {
-            Object.keys(data).forEach(function(key) {
-                if (!(data[key] instanceof Object)) {
-                    ++loadedPages;
-                }
-                if (data[key] instanceof Object) {
-                    if (self.VIRTUALPAGES[key]) {
-                        page[key] = {};
-                        _virtualise(data[key], key);
-                    }
-                } else {
-                    if (page[index]) {
-                        self.GET(SONNY.PAGEPATH + data[key], function(resp) {
-
-                            if (page[index][data[key]]) 
-                            throw new Error("Multiple definition of " + page[index][data[key]].path + "!");
-
-                            var compiler = self.compiler;
-
-                            var DOM = compiler.DOM(resp);
-
-                            if (DOM.tagName !== 'APP') throw new Error('Missing "app" tag in ' + data[key] + '!');
-
-                            var DOMOBJECT = compiler.HTML(DOM);
-                                DOMOBJECT.content = DOMOBJECT.inside;
-                                DOMOBJECT.path = data[key];
-
-                            delete DOMOBJECT.inside;
-
-                            page[index][data[key]] = new SONNY.Page(DOMOBJECT);
-
-                            --loadedPages;
-                            if (loadedPages <= 0) {
-                                resolve(page);
-                            }
-                        });
-                    }
-                }
+        /**
+         * Object to array conversion
+         */
+        if (typeof data === 'object') {
+            var oldData = data;
+            var newData = [];
+            Object.keys(data).forEach( function(key)  {
+                newData.push(data[key]);
             });
-        };
-        _virtualise(this.VIRTUALPAGES);
+            if (newData.length) data = newData;
+        }
+
+        var _virtualise = function(data) {
+            if (typeof data[0] === 'string') {
+                self.GET(SONNY.PAGEPATH + data[0], function(resp) {
+                    
+                    if (page[data[0]])
+                    throw new Error("Multiple definition of " + page[data[0]].path + "!");
+                            
+                    var compiler = self.compiler;
+
+                    var DOM = compiler.DOM(resp);
+
+                    if (DOM.tagName !== 'APP') throw new Error('Missing "app" tag in ' + data[0] + '!');
+
+                    var DOMOBJECT = compiler.HTML(DOM);
+                        DOMOBJECT.content = DOMOBJECT.inside;
+                        DOMOBJECT.path = data[0];
+
+                        delete DOMOBJECT.inside;
+
+                        page[data.shift()] = new SONNY.Page(DOMOBJECT);
+
+                        if (data.length) _virtualise(data);
+                        else resolve(page);
+                    
+                }); 
+            }
+        }
+        
+        _virtualise(data);
+
     };
 
     /**
@@ -186,6 +188,8 @@
         this.requireServer = Boolean(page["sy-requireserver"]) || false;
         this.content = page.content;
         this.includes = 0;
+        this.renderedTimes = 0;
+        this.global = Boolean(page.global) || false;
         this.ready = true;
     };
 
@@ -234,7 +238,7 @@
                     object[ii] = _inherit(object[ii]);
                     if (object[ii].key && object[ii].key === "syinclude") {
                         pageObject.includes++;
-                        var result = _inherit(self.__instance.renderer.get(object[ii].page + SONNY.FILETYPE)).content;
+                        var result = _inherit(self.__instance.renderer.get(object[ii].page + SONNY.FILETYPE)).content; 
                         object.splice(ii, !false);
                         object.splice.apply(_inherit(object), [ii, 0].concat(result));
                     }
@@ -441,15 +445,18 @@
 
         this.page = this.get(page + SONNY.FILETYPE);
 
-        this.__instance.CURRENTPAGE = page;
+        /**
+         * Ignore global pages
+         */
+        if (!this.page.global) this.__instance.CURRENTPAGE = page;
+
+        this.page.rendered = this.compile(this.page);
 
         var result = this.compile(this.page);
 
-        for (var ii in result) {
-            this.attach(result[ii]);
-        }
+        this.attach(this.page);
 
-        if (SONNY.HISTORY && !arguments[1]) {
+        if (SONNY.HISTORY && !arguments[1] && !this.page.global) {
             this.__instance.history.update(this.__instance.CURRENTPAGE);
         }
 
@@ -459,9 +466,20 @@
      * @param page (string) : public/home
      * Clean the sonny instance page container for new content
      */
-    SONNY.Renderer.prototype.kill = function(page) {
-        if (this.__instance.BODY) {
-            this.__instance.BODY.innerHTML = "";
+    SONNY.Renderer.prototype.kill = function() {
+        if (!arguments[0]) {
+            if (this.__instance.CONTAINERS.BODY) {
+                this.__instance.CONTAINERS.BODY.innerHTML = "";
+            }
+        } else {
+            switch(arguments[0]) {
+                case "local":
+                    this.__instance.CONTAINERS.BODY.innerHTML = "";
+                    break;
+                case "global":
+                    this.__instance.CONTAINERS.GLOBALBODY.innerHTML = "";
+                    break;
+            }
         }
     };
 
@@ -479,7 +497,10 @@
             array.push(compiler.JSON(page[ii]));
         }
 
-        this.kill();
+        /**
+         * Dont kill the local container if some global content gets rendered
+         */
+        if (!this.page.global) this.kill();
 
         return array;
     };
@@ -489,12 +510,23 @@
      * @param page (html)
      */
     SONNY.Renderer.prototype.attach = function(page) {
-        try {
-            for (var ii in page) {
-                this.__instance.BODY.appendChild(page[ii]);
+
+        var self = this;
+
+        var _attach = function(data, type) {
+            if (data.rendered) {
+                for (var ii in data.rendered) {
+                    for (var kk in data.rendered[ii]) {
+                        self.__instance.CONTAINERS[type].appendChild(data.rendered[ii][kk]);
+                    }
+                }
             }
-        } catch (e) { 
-            throw new Error(e);
+        }
+
+        if (page.global) {
+            _attach(page, "GLOBALBODY");
+        } else {
+            _attach(page, "BODY");
         }
     };
 
@@ -505,41 +537,15 @@
     SONNY.Renderer.prototype.get = function(page) {
 
         var self = this;
-
-        page = page.match("/") ? page.split("/") : page;
-
-        var data,
-            main,
-            result;
-
-        var _fetch = function(value, index) {
-            if (self.__instance.PAGES[value]) {
-                _fetch(self.__instance.PAGES[value], value);
-            } else {
-                var url = "";
-                if (value && index) {
-                    for (var ii in page) {
-                        if (!page[ii].match(SONNY.FILETYPE)) {
-                            url += page[ii] + "/";
-                            if (self.__instance.PAGES[page[ii]]) {
-                                data = self.__instance.PAGES[page[ii]];
-                            }
-                        } else {
-                            url += page[ii];
-                            main = url;
-                            result = data[main];
-                            if (!(data[main])) throw new Error("The page " + main + " does not exist or was not successfully loaded!");
-                        }
-                    }
-                }
-            }
+    
+        var data;
+    
+        var _fetch = function(data) {
+            if (self.__instance.PAGES[data]) return self.__instance.PAGES[data];
+            else throw new Error("The page " + page + " does not exist or was not successfully loaded!");
         }
 
-        for (var key in page) {
-            _fetch(page[key]);
-        }
-
-        return result;
+        return _fetch(page);
     };
 
     /**
@@ -675,7 +681,7 @@
         this.originalURL = "";
 
         this.additionalURL = "";
-        
+
         this.init();
 
     };
@@ -852,7 +858,7 @@
             localStorage.setItem(SONNY.STORAGE_EXT + object.name, object.data);
         }
     };
-   
+
     /**
      * Delete a specific global key from the storage
      */
@@ -907,7 +913,7 @@
      * A instance represents the core of a website session.
      * @param Page/settings object
      */
-    SONNY.Instance = function(object, resolve) {
+    SONNY.Instance = function(data, resolve) {
 
         /**
          * Increase global sonny initialized counter
@@ -936,9 +942,20 @@
         this.STARTPAGE = null;
 
         /**
+         * Object to store containers sonny uses
+         * Stores a local and global container
+         */
+        this.CONTAINERS = {};
+
+        /**
          * The element container where a page get rendered into
          */
-        this.PAGECONTAINER = "syContainer";
+        this.CONTAINERS.BODYCONTAINER = "syContainer";
+
+        /**
+         * The element container where a page get rendered into
+         */
+        this.CONTAINERS.GLOBALCONTAINER = "syGlobal";
 
         /**
          * The current page a user is located
@@ -985,12 +1002,12 @@
         /**
          * Overwrite local instance settings by users's instance settings object
          */
-        this.processSettings(object);
+        this.processSettings(data);
 
         /**
          * Save all unvirtualized pages
          */
-        this.VIRTUALPAGES = object;
+        this.VIRTUALPAGES = data;
 
         /**
          * Either on a mobile platform or os
@@ -1005,7 +1022,12 @@
         /**
          * Check if we already have access to the page parse container
          */
-        this.BODY = $(this.PAGECONTAINER) || null;
+        this.CONTAINERS.BODY = $(this.CONTAINERS.BODYCONTAINER) || null;
+
+        /**
+         * Check if we already have access to the page parse container
+         */
+        this.CONTAINERS.GLOBALBODY = $(this.GLOBALCONTAINER) || null;
 
         /**
          * Local renderer to render virtualized pages
@@ -1066,11 +1088,14 @@
     SONNY.Instance.prototype.createContainer = function(resolve) {
         var self = this;
         window.addEventListener('DOMContentLoaded', function() {
-            if (!self.BODY && !self.CONTAINER) {
-                var container = document.createElement(self.PAGECONTAINER);
-                self.BODY = $("body");
-                self.BODY.appendChild(container);
-                self.BODY = $(container.tagName.toLowerCase());
+            if (!self.CONTAINERS.BODY && !self.CONTAINERS.BODY) {
+                var localContainer = document.createElement(self.CONTAINERS.BODYCONTAINER),
+                    globalContainer = document.createElement(self.CONTAINERS.GLOBALCONTAINER);
+                self.CONTAINERS.BODY = $("body");
+				self.CONTAINERS.BODY.appendChild(globalContainer);
+                self.CONTAINERS.BODY.appendChild(localContainer);
+                self.CONTAINERS.BODY = $(localContainer.tagName.toLowerCase());
+                self.CONTAINERS.GLOBALBODY = $(globalContainer.tagName.toLowerCase());
             }
             resolve();
         });
