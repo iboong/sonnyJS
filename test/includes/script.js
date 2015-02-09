@@ -2,11 +2,11 @@
 
     var SonnyPages = [
         'public/index.html',
-		'public/navigation.html',
-		'public/header.html',
-		'public/footer.html',
-		'public/ghostcontent.html',
-		'public/realcontent.html'
+        'public/navigation.html',
+        'public/header.html',
+        'public/footer.html',
+        'public/ghostcontent.html',
+        'public/realcontent.html'
     ];
 
     SonnyPages.Settings = {
