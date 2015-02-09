@@ -376,10 +376,10 @@
 
         var self = this;
 
-        var LOAD = "sy-load";
+        var LOAD = "syload";
         var MINMAX = "sy-min-max";
-        var ACTION = "sy-action";
-        var IMAGE = "sy-image";
+        var ACTION = "syaction";
+        var IMAGE = "syimage";
 
         if (!element) throw new Error("Invalid element type!");
 
