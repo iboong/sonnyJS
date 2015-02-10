@@ -1,5 +1,5 @@
 /**
- * sonnyJS v0.1.3
+ * sonnyJS v0.1.5
  * www.github.com/felixmaier/sonnyJS
  * @author Felix Maier
  */
@@ -23,7 +23,7 @@
     /**
      * Version of sonny
      */
-    SONNY.VERSION = "0.1.3";
+    SONNY.VERSION = "0.1.5";
 
     /**
      * Default page path where sonny templates are stored
@@ -66,6 +66,16 @@
     SONNY.SHOWVERSION = false;
 
     /**
+     * Sonny constants for document processes
+     */
+    SONNY.CONST = {
+        APP: "APP",
+        LOAD: "syload",
+        INCLUDE: "include",
+        VAR: "var"
+    };
+
+    /**
      * Manages all virtual pages
      * Get each unvirtualized page from the sonny instance
      * Get each page file and virtualize it
@@ -76,17 +86,18 @@
         var self = this;
 
         if (!SONNY.LOADED) {
-            this.init(this.VIRTUALPAGES, function(result) {
+            this.init(this.VIRTUALPAGES, function(result) { console.log(result);
                 self.PAGES = result;
                 self.PAGES = self.interpreter.Includes(result);
+                self.PAGES = self.interpreter.Variables(result);
                 SONNY.LOADED = true;
                 resolve();
                 /**
                  * Automatically render the start page defined from the settings object
                  */
                 if (self.STARTPAGE) {
-                    self.renderer.render(self.STARTPAGE);	
-				}
+                    self.renderer.render(self.STARTPAGE);    
+                }
                 /**
                  * Got adressbar parameters
                  * Used to withstand on page refreshes
@@ -130,12 +141,12 @@
                     
                     if (page[data[0]])
                     throw new Error("Multiple definition of " + page[data[0]].path + "!");
-                            
+ 
                     var compiler = self.compiler;
 
                     var DOM = compiler.DOM(resp);
 
-                    if (DOM.tagName !== 'APP') throw new Error('Missing "app" tag in ' + data[0] + '!');
+                    if (DOM.tagName !== SONNY.CONST.APP) throw new Error('Missing "app" tag in ' + data[0] + '!');
 
                     var DOMOBJECT = compiler.HTML(DOM);
                         DOMOBJECT.content = DOMOBJECT.inside;
@@ -177,19 +188,22 @@
     /**
      * Represents a page object
      * @param name (string) name of the page
-     * @param server (boolean) page requires server values
+     * @param path (string) path to this page
+     * @param requireServer (boolean) page requires a server to fill values
      * @param content (object) content of the page to render
-     * @param includes (integer) counts amount of included external pages
-     * @param ready (boolean) page is in an ready to be rendered state
+     * @param global (boolean) page can be parsed global or local
+     * includes (integer) counts amount of included external pages
+     * renderedTimes (integer) counts how often the page got rendered in this session
+     * ready (boolean) page is in an ready to be rendered state
      */
     SONNY.Page = function(page) {
-        this.name = String(page["sy-sitename"]);
+        this.name = String(page["sitename"]);
         this.path = String(page.path);
-        this.requireServer = Boolean(page["sy-requireserver"]) || false;
+        this.requireServer = Boolean(page["requireserver"]) || false;
         this.content = page.content;
+        this.global = Boolean(page.global) || false;
         this.includes = 0;
         this.renderedTimes = 0;
-        this.global = Boolean(page.global) || false;
         this.ready = true;
     };
 
@@ -209,8 +223,8 @@
 
 
     /**
-     * Finds include keys in objects
-     * Replace include element with virtual sonny page content
+     * Find include keys in objects
+     * Replace include object with virtual sonny page content
      * @param object (object) sonny page object
      */
     SONNY.Interpreter.prototype.Includes = function(object) {
@@ -236,11 +250,56 @@
             for (var ii in object) {
                 if (typeof object[ii] === "object") {
                     object[ii] = _inherit(object[ii]);
-                    if (object[ii].key && object[ii].key === "syinclude") {
+                    if (object[ii].key && object[ii].key === SONNY.CONST.INCLUDE) {
                         pageObject.includes++;
                         var result = _inherit(self.__instance.renderer.get(object[ii].page + SONNY.FILETYPE)).content; 
                         object.splice(ii, !false);
                         object.splice.apply(_inherit(object), [ii, 0].concat(result));
+                    }
+                }
+            }
+            return object;
+        };
+
+        return _initialize(pageObject);
+    }
+    
+    /**
+     * Find var keys in objects
+     * Replace var object with sonny variable declaration
+     * @param object (object) sonny page object
+     */
+    SONNY.Interpreter.prototype.Variables = function(object) {
+
+        var self = this;
+
+        var pageObject = object;
+        
+        var variables = self.__instance.VARIABLES;
+
+        var _initialize = function(data) {
+            for (var ii in data) {
+                if (typeof data[ii] === 'object') {
+                    _initialize(data[ii]);
+                    if (data.content) { 
+                        pageObject = data;
+                        data.content = _variables(data.content);
+                    }
+                }
+            }
+            return data;
+        };
+
+        var _variables = function(object) {
+            for (var ii in object) {
+                if (typeof object[ii] === "object") {
+                    object[ii] = _variables(object[ii]);
+                    if (object[ii].key && object[ii].key === SONNY.CONST.VAR) {
+                        if (object[ii].variable) {
+                            var backup = object[ii].variable;
+                            object[ii] = {};
+                            object[ii].text = variables[backup] || 'undefined';
+                        } else object[ii].text = 'undefined';
                     }
                 }
             }
@@ -277,10 +336,28 @@
     SONNY.Compiler.prototype.HTML = function(object) {
         if (!object instanceof Object) throw new Error("Received arguments of invalid type");
         var virtualPage = {};
-        virtualPage.key = object.tagName.toLowerCase();
+            virtualPage.key = object.tagName.toLowerCase();
         if (object.hasAttribute) {
-            for (var ii = 0; ii < object.attributes.length; ii++) {
-                virtualPage[object.attributes[ii].name] = object.attributes[ii].value;
+            if (virtualPage.key === SONNY.CONST.INCLUDE) {
+                for (var ii = 0, link = ""; ii < object.attributes.length;) {
+                    link += (ii > 0 ? "/" : "") + object.attributes[ii].name;
+                    if (++ii === object.attributes.length) {
+                        link = link.replace(/"/gi, "");
+                        virtualPage.page = link;
+                    }
+                }
+            } else if (virtualPage.key === "var") {
+                for (var ii = 0, link = ""; ii < object.attributes.length;) {
+                    link += (ii > 0 ? "_" : "") + object.attributes[ii].name;
+                    if (++ii === object.attributes.length) {
+                        link = link.replace(/%/gi, "");
+                        virtualPage.variable = link.toUpperCase();
+                    }
+                }
+            } else {
+                for (var ii = 0; ii < object.attributes.length; ii++) {
+                    virtualPage[object.attributes[ii].name] = object.attributes[ii].value;
+                }
             }
         }
         if (object.hasChildNodes()) {
@@ -315,15 +392,18 @@
 
         var _compile = function(data) {
 
-            if (data.key !== "syinclude") {
-            for (var key in data) {
-                
-                if (key === "key") {
+            if (data.key !== SONNY.CONST.INCLUDE && data.key !== SONNY.CONST.VAR) {
+            for (var ii in data) {
+
+                if (ii === "key") {
                     element = document.createElement(data.key);
-                } else if (key === "text") {
+                } else if (element && ii === "text") {
                     element.innerHTML = data.text;
                 } else {
-                    if (key === "inside") {
+                    if (!element && ii === "text") {
+                        element = document.createTextNode(data[ii]);
+                    }
+                    if (ii === "inside") {
                         if (data.inside) {
                             for (var ii = 0; ii < data.inside.length; ++ii) {
                                 var insideElements = self.JSON(data.inside[ii]);
@@ -335,7 +415,11 @@
                     } else {
                         try {
                             // Don't render backups
-                            if (element && key !== "backup") element.setAttribute(key, data[key]);
+                            if (element && ii !== "backup") {
+                                if (element.nodeName !== "#text") {
+                                    element.setAttribute(ii, data[ii]);
+                                }
+                            }
                         } catch (e) {
                             throw new Error("JSON rendering failed: " + e);
                         }
@@ -376,19 +460,17 @@
 
         var self = this;
 
-        var LOAD = "syload";
-        var MINMAX = "sy-min-max";
-        var ACTION = "syaction";
-        var IMAGE = "syimage";
-
         if (!element) throw new Error("Invalid element type!");
 
-        if (element.attributes[LOAD]) {
-            if (element.attributes[LOAD].value.match(":")) {
-                element = this.addListeners(element, LOAD);
+        // Ignore text nodes
+        if (element.nodeName && element.nodeName === "#text") return element;
+
+        if (element.attributes[SONNY.CONST.LOAD]) {
+            if (element.attributes[SONNY.CONST.LOAD].value.match(":")) {
+                element = this.addListeners(element, SONNY.CONST.LOAD);
             } else {
                 element.addEventListener('click', function() {
-                    self.instance.render(element.attributes[LOAD].value + SONNY.FILETYPE);
+                    self.instance.render(element.attributes[SONNY.CONST.LOAD].value + SONNY.FILETYPE);
                 });
             }
         }
@@ -1000,6 +1082,12 @@
         this.DISPLAYNOTIFICATIONS = true;
 
         /**
+         * Variables are stored here
+         * Can be used to display variables in the document
+         */
+        this.VARIABLES = {};
+
+        /**
          * Overwrite local instance settings by users's instance settings object
          */
         this.processSettings(data);
@@ -1092,7 +1180,7 @@
                 var localContainer = document.createElement(self.CONTAINERS.BODYCONTAINER),
                     globalContainer = document.createElement(self.CONTAINERS.GLOBALCONTAINER);
                 self.CONTAINERS.BODY = $("body");
-				self.CONTAINERS.BODY.appendChild(globalContainer);
+                self.CONTAINERS.BODY.appendChild(globalContainer);
                 self.CONTAINERS.BODY.appendChild(localContainer);
                 self.CONTAINERS.BODY = $(localContainer.tagName.toLowerCase());
                 self.CONTAINERS.GLOBALBODY = $(globalContainer.tagName.toLowerCase());
@@ -1104,6 +1192,7 @@
     /**
      * Process settings from instance declaration
      * @param object.Settings
+     * @param object.Variables
      */
     SONNY.Instance.prototype.processSettings = function(object) {
         if (object.Settings) {
@@ -1117,6 +1206,15 @@
                 }
             }
             delete object.Settings;
+        }
+        if (object.Variables) {
+            if (!object.Variables instanceof Object) throw new Error("Invalid variable type");
+            for (var ii in object.Variables) {
+                if (!this.VARIABLES[ii]) {
+                    this.VARIABLES[ii] = object.Variables[ii];
+                }
+            }
+            delete object.Variables;
         }
     };
 

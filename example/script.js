@@ -1,8 +1,8 @@
 (function() {
 
-	SONNY.PAGEPATH = "../templates/";
+    SONNY.PAGEPATH = "../templates/";
 
-    var SonnyPages = [
+    var Sonny = [
         'public/login.html',
         'public/register.html',
         'public/footer.html',
@@ -10,16 +10,22 @@
         'public/navigation.html'
     ];
 
-    SonnyPages.Settings = {
+    Sonny.Settings = {
         connection: false,
         connectionPort: 9005,
         displaynotifications: false
     }
 
-    var instance = new SONNY.Instance(SonnyPages, function() {
+    Sonny.Variables = {
+		FIRST_WEBSITE: "My first Website!"
+    }
+
+    var instance = new SONNY.Instance(Sonny, function() {
 
         var renderer = new SONNY.Renderer(instance);
-			renderer.render("public/login.html");
+            renderer.render("public/login.html");
+
+        console.log(instance);
 
     });
 

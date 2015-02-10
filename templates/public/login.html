@@ -1,12 +1,13 @@
-<app sy-siteName="Login">
+<app siteName="Login">
     <div id="trinity" class="trinity">
 
 	  <div class="t-1 header" id="header">
 		<div class="container">
 
 		  <span class="t-3-o-2 hello">
+			<h3> <VAR %FIRST_WEBSITE% ></VAR> </h3>
 			<img src="http://www.sonnyjs.org/demo/assets/img/logo.png" class="rotateIn animated">
-			<h3>Your are on login.html</a></h3>
+			<h3>Your are on login.html</h3>
 		  </span>
 		</div>
       </div>
@@ -14,17 +15,17 @@
 	  <div class="t-1 main zoomIn animated">
 		<div class="container">
 
-		<syinclude page="public/navigation"></syinclude>
-		
+		<INCLUDE "public/navigation"></INCLUDE>
+
 		  <div class="t-1 more">
-		  
+
 			<div class="t-2">
 			  <img src="http://lorempixel.com/g/500/500/cats/" alt="" />
 			</div>
 
 			<div class="t-2">
-			
-			  <p>Your are on login.html</p>
+
+			  <p>You are on login.html </p>
 			
 			  <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Qui labore, quod? Laboriosam veritatis vel, dolorum quidem rem tempora dolorem necessitatibus vero laudantium libero nobis repudiandae ea eum quaerat obcaecati perspiciatis!</p>
 
@@ -32,15 +33,15 @@
 
 			  <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Qui labore, quod? Laboriosam veritatis vel, dolorum quidem rem tempora dolorem necessitatibus vero laudantium libero nobis repudiandae ea eum quaerat obcaecati perspiciatis!</p>
 			</div>
-			
+
 		  </div>
 
-		  <syinclude page="public/gallery"></syinclude>
+		  <INCLUDE "public/gallery"></INCLUDE>
 		  
 		</div>
 	  </div>
 
-	  <syinclude page="public/footer"></syinclude>
+	  <INCLUDE "public/footer"></INCLUDE>
 
 	</div>
 </app>
