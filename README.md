@@ -1,10 +1,12 @@
 # sonnyJS
 
+![Sonny](http://sonnyjs.org/demo/assets/img/favicon.png)
+
 ### What is sonnyJS?
 
-SonnyJS is a minimalist HTML pre-processor, designed to help developers and designers to create single page websites.
+SonnyJS is a minimalist single page application engine and HTML pre-processor, designed to help developers and designers to create incredibly fast single page websites.
 
-Sonny allows template nesting, incredibly fast template routing, cross window communication, and reduces traffic.
+Sonny works very different than other single page engines, check it out to see how awesome it is.
 
 Missing features, found a bug, want to discuss?
 www.sonnyjs.org/forum
