@@ -1,6 +1,6 @@
 # sonnyJS
 
-![Sonny](http://sonnyjs.org/demo/assets/img/favicon.png)
+![Sonny](http://sonnyjs.org/demo/assets/img/favicon_small.png)
 
 ### What is sonnyJS?
 
