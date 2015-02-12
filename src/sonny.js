@@ -1019,25 +1019,28 @@
         this.INSTANCE = this;
 
         /**
-         * If defined, the page value will be rendered automatically after everything has loaded successfully
-         */
-        this.STARTPAGE = null;
-
-        /**
          * Object to store containers sonny uses
          * Stores a local and global container
          */
-        this.CONTAINERS = {};
+        this.CONTAINERS = {
+			BODYCONTAINER: "syContainer",
+			GLOBALCONTAINER: "syGlobal"
+		};
 
         /**
-         * The element container where a page get rendered into
+         * Check if we already have access to the page parse container
          */
-        this.CONTAINERS.BODYCONTAINER = "syContainer";
+        this.CONTAINERS.BODY = $(this.CONTAINERS.BODYCONTAINER) || null;
 
         /**
-         * The element container where a page get rendered into
+         * Check if we already have access to the page parse container
          */
-        this.CONTAINERS.GLOBALCONTAINER = "syGlobal";
+        this.CONTAINERS.GLOBALBODY = $(this.CONTAINERS.GLOBALCONTAINER) || null;
+
+        /**
+         * If defined, the page value will be rendered automatically after everything has loaded successfully
+         */
+        this.STARTPAGE = null;
 
         /**
          * The current page a user is located
@@ -1106,16 +1109,6 @@
          * Update local instance size settings
          */
         this.resize();
-
-        /**
-         * Check if we already have access to the page parse container
-         */
-        this.CONTAINERS.BODY = $(this.CONTAINERS.BODYCONTAINER) || null;
-
-        /**
-         * Check if we already have access to the page parse container
-         */
-        this.CONTAINERS.GLOBALBODY = $(this.GLOBALCONTAINER) || null;
 
         /**
          * Local renderer to render virtualized pages
