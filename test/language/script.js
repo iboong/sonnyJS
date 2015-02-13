@@ -1,6 +1,6 @@
 (function() {
 
-    SONNY.PAGEPATH = "../templates/";
+    SONNY.PAGEPATH = "../../templates/";
 
 	SONNY.CONFIGPATH = "./config.json";
 

@@ -1,0 +1,16 @@
+{
+  "Pages": [
+	"public/index.html",
+    "public/navigation.html",
+    "public/header.html",
+    "public/footer.html",
+    "public/ghostcontent.html",
+    "public/realcontent.html"
+  ],
+  "Settings": {
+	"language": "en",
+    "connection": false,
+    "connectionPort": 9005,
+    "displayNotifications": false
+  }
+}

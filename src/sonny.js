@@ -1,5 +1,5 @@
 /**
- * sonnyJS v0.1.5
+ * sonnyJS v0.1.6
  * www.github.com/felixmaier/sonnyJS
  * @author Felix Maier
  */
@@ -23,12 +23,17 @@
     /**
      * Version of sonny
      */
-    SONNY.VERSION = "0.1.5";
+    SONNY.VERSION = "0.1.6";
 
     /**
      * Default page path where sonny templates are stored
      */
     SONNY.PAGEPATH = "view/";
+
+    /**
+     * Default page path where the configuration file lies
+     */
+    SONNY.CONFIGPATH = "./config.json";
 
     /**
      * Filetype sonny has to process
@@ -85,8 +90,9 @@
 
         var self = this;
 
+		/** Sonny got already loaded at least 1 time */
         if (!SONNY.LOADED) {
-            this.init(this.VIRTUALPAGES, function(result) { console.log(result);
+            this.init(this.VIRTUALPAGES, function(result) {
                 self.PAGES = result;
                 self.PAGES = self.interpreter.Includes(result);
                 self.PAGES = self.interpreter.Variables(result);
@@ -107,7 +113,24 @@
                     self.renderer.render(self.history.additionalURL + SONNY.FILETYPE);
                 }
             });
-        }
+        } else {
+			var newPages = {};
+			for (var ii in self.PLAINPAGES) {
+				if (self.PLAINPAGES[ii] instanceof HTMLElement) {
+					var compiler = self.compiler;
+					var DOMOBJECT = compiler.HTML(self.PLAINPAGES[ii]);
+                        DOMOBJECT.content = DOMOBJECT.inside;
+                        DOMOBJECT.path = ii;
+
+						delete DOMOBJECT.inside;
+
+						newPages[ii] = new SONNY.Page(DOMOBJECT);
+				}
+			}
+			self.PAGES = newPages;
+            self.PAGES = self.interpreter.Includes(self.PAGES);
+            self.PAGES = self.interpreter.Variables(self.PAGES);
+		}
 
     };
 
@@ -137,8 +160,8 @@
 
         var _virtualise = function(data) {
             if (typeof data[0] === 'string') {
-                self.GET(SONNY.PAGEPATH + data[0], function(resp) {
-                    
+                SONNY.AJAX(SONNY.PAGEPATH + data[0], function(resp) {
+
                     if (page[data[0]])
                     throw new Error("Multiple definition of " + page[data[0]].path + "!");
  
@@ -154,6 +177,8 @@
 
                         delete DOMOBJECT.inside;
 
+						self.PLAINPAGES[data[0]] = DOM;
+
                         page[data.shift()] = new SONNY.Page(DOMOBJECT);
 
                         if (data.length) _virtualise(data);
@@ -165,24 +190,6 @@
         
         _virtualise(data);
 
-    };
-
-    /**
-     * Add a page object to the pageInstances
-     * @param: url (string) : public/home
-     */
-    SONNY.Virtualiser.prototype.GET = function(url, resolve) {
-        var request = new SONNY.GET();
-        request.onload = function() {
-            if (this.status === 200) {
-                resolve(this.responseText);
-            } else {
-                throw new Error("Status code was " + this.status);
-            }
-        };
-        request.open('GET', url + "?" + (new Date()).getTime(), true);
-        if (request.overrideMimeType) request.overrideMimeType('text/html');
-        request.send(null);
     };
 
     /**
@@ -276,6 +283,8 @@
         var pageObject = object;
         
         var variables = self.__instance.VARIABLES;
+		
+		var language = self.__instance.LANGUAGE;
 
         var _initialize = function(data) {
             for (var ii in data) {
@@ -298,7 +307,11 @@
                         if (object[ii].variable) {
                             var backup = object[ii].variable;
                             object[ii] = {};
-                            object[ii].text = variables[backup] || 'undefined';
+							if (variables[backup]) {
+								object[ii].text = variables[backup] || 'undefined';
+							} else if (language && variables[language] && variables[language][backup]) {
+								object[ii].text = variables[language][backup];
+							} else object[ii].text = 'undefined';
                         } else object[ii].text = 'undefined';
                     }
                 }
@@ -995,7 +1008,7 @@
      * A instance represents the core of a website session.
      * @param Page/settings object
      */
-    SONNY.Instance = function(data, resolve) {
+    SONNY.Instance = function(resolve) {
 
         /**
          * Increase global sonny initialized counter
@@ -1023,9 +1036,9 @@
          * Stores a local and global container
          */
         this.CONTAINERS = {
-			BODYCONTAINER: "syContainer",
-			GLOBALCONTAINER: "syGlobal"
-		};
+            BODYCONTAINER: "syContainer",
+            GLOBALCONTAINER: "syGlobal"
+        };
 
         /**
          * Check if we already have access to the page parse container
@@ -1085,74 +1098,91 @@
         this.DISPLAYNOTIFICATIONS = true;
 
         /**
+        * Save all unvirtualized pages
+        */
+        this.VIRTUALPAGES = [];
+		
+        /**
+		 * Virtualised pages get stored here
+		 */
+		this.PAGES = {};
+		
+		/**
+		 * Unvirtualised pages get stored here
+		 */
+		this.PLAINPAGES = {};
+
+        /**
          * Variables are stored here
          * Can be used to display variables in the document
          */
         this.VARIABLES = {};
+		
+		/**
+         * Defines variable language
+         */
+        this.LANGUAGE = null;
 
         /**
-         * Overwrite local instance settings by users's instance settings object
+         * Overwrite local instance settings by users json configuration file
          */
-        this.processSettings(data);
+        this.processConfiguration( function() {
 
-        /**
-         * Save all unvirtualized pages
-         */
-        this.VIRTUALPAGES = data;
+            /**
+             * Either on a mobile platform or os
+             */
+            self.isMobile();
 
-        /**
-         * Either on a mobile platform or os
-         */
-        this.isMobile();
+            /**
+             * Update local instance size settings
+             */
+            self.resize();
 
-        /**
-         * Update local instance size settings
-         */
-        this.resize();
+            /**
+             * Local renderer to render virtualized pages
+             * @param this instance
+             */
+            self.renderer = new SONNY.Renderer(self);
 
-        /**
-         * Local renderer to render virtualized pages
-         * @param this instance
-         */
-        this.renderer = new SONNY.Renderer(this);
+            /**
+             * Local interpreter to interpret virtualized page objects
+             * @param this instance
+             */
+            self.interpreter = new SONNY.Interpreter(self);
 
-        /**
-         * Local interpreter to interpret virtualized page objects
-         * @param this instance
-         */
-        this.interpreter = new SONNY.Interpreter(this);
+            /**
+             * Local compiler to virtualize HTML pages
+             */
+            self.compiler = new SONNY.Compiler(self);
 
-        /**
-         * Local compiler to virtualize HTML pages
-         */
-        this.compiler = new SONNY.Compiler(this);
+            /**
+             * Local notifications
+             */
+            self.notify = new SONNY.Notifications(self);
 
-        /**
-         * Local notifications
-         */
-        this.notify = new SONNY.Notifications(this);
+            /**
+             * Simplifies the management of the browser history
+             * Manipulates the adressbar
+             */
+            self.history = new SONNY.HistoryManager(self);
 
-        /**
-         * Simplifies the management of the browser history
-         * Manipulates the adressbar
-         */
-        this.history = new SONNY.HistoryManager(this);
-
-        /**
-         * Create a page container if not already existing
-         * Call virtualiser after successfully preparing the page container
-         */
-        this.createContainer(function() {
-            SONNY.Virtualiser.call(self, function() {
-                /**
-                 * Initialize a new connection
-                 */
-                self.CONNECTION ? self.CONNECTION = new SONNY.Connection(self) : null;
-                /**
-                 * Let the developer know everything succeeded
-                 */
-                resolve();
+            /**
+             * Create a page container if not already existing
+             * Call virtualiser after successfully preparing the page container
+             */
+            self.createContainer(function() {
+                SONNY.Virtualiser.call(self, function() {
+                    /**
+                     * Initialize a new connection
+                     */
+                    self.CONNECTION ? self.CONNECTION = new SONNY.Connection(self) : null;
+                    /**
+                     * Let the developer know everything succeeded
+                     */
+                    resolve();
+                });
             });
+			
         });
 
     };
@@ -1168,18 +1198,16 @@
      */
     SONNY.Instance.prototype.createContainer = function(resolve) {
         var self = this;
-        window.addEventListener('DOMContentLoaded', function() {
-            if (!self.CONTAINERS.BODY && !self.CONTAINERS.BODY) {
-                var localContainer = document.createElement(self.CONTAINERS.BODYCONTAINER),
-                    globalContainer = document.createElement(self.CONTAINERS.GLOBALCONTAINER);
-                self.CONTAINERS.BODY = $("body");
-                self.CONTAINERS.BODY.appendChild(globalContainer);
-                self.CONTAINERS.BODY.appendChild(localContainer);
-                self.CONTAINERS.BODY = $(localContainer.tagName.toLowerCase());
-                self.CONTAINERS.GLOBALBODY = $(globalContainer.tagName.toLowerCase());
-            }
+        if (!self.CONTAINERS.BODY && !self.CONTAINERS.BODY) {
+            var localContainer = document.createElement(self.CONTAINERS.BODYCONTAINER),
+                globalContainer = document.createElement(self.CONTAINERS.GLOBALCONTAINER);
+            self.CONTAINERS.BODY = $("body");
+            self.CONTAINERS.BODY.appendChild(globalContainer);
+            self.CONTAINERS.BODY.appendChild(localContainer);
+            self.CONTAINERS.BODY = $(localContainer.tagName.toLowerCase());
+            self.CONTAINERS.GLOBALBODY = $(globalContainer.tagName.toLowerCase());
+        }
             resolve();
-        });
     };
 
     /**
@@ -1187,29 +1215,48 @@
      * @param object.Settings
      * @param object.Variables
      */
-    SONNY.Instance.prototype.processSettings = function(object) {
-        if (object.Settings) {
-            if (!object.Settings instanceof Object) throw new Error("Invalid settings type");
-            for (var ii in object.Settings) {
-                if (object.Settings[ii] === null || object.Settings[ii] === undefined) throw new Error(ii + " value is invalid");
-                var original = ii;
-                ii = String(ii.toUpperCase());
-                if (this[ii] !== undefined || this[ii] === null) {
-                    this[ii] = object.Settings[original];
-                }
+    SONNY.Instance.prototype.processConfiguration = function(resolve) {
+
+        var self = this;
+
+        SONNY.AJAX(SONNY.CONFIGPATH, function(object) {
+            object = JSON.parse(object);
+            /** Process website pages */
+            if (object.Pages) {
+                if (!object.Settings instanceof Object) throw new Error("Invalid Page definition");
+                self.VIRTUALPAGES = object.Pages;
+                delete object.Pages;
             }
-            delete object.Settings;
-        }
-        if (object.Variables) {
-            if (!object.Variables instanceof Object) throw new Error("Invalid variable type");
-            for (var ii in object.Variables) {
-                if (!this.VARIABLES[ii]) {
-                    this.VARIABLES[ii] = object.Variables[ii];
+            /** Process settings */
+            if (object.Settings) {
+                if (!object.Settings instanceof Object) throw new Error("Invalid settings type");
+                for (var ii in object.Settings) { 
+                    if (object.Settings[ii] === null || object.Settings[ii] === undefined) throw new Error(ii + " value is invalid");
+                    var original = ii;
+                    ii = String(ii.toUpperCase());
+                    if (self[ii] !== undefined || self[ii] === null) {
+                        self[ii] = object.Settings[original];
+                    }
                 }
+                delete object.Settings;
             }
-            delete object.Variables;
-        }
+            /** Process global variables */
+            if (object.Variables) {
+                if (!object.Variables instanceof Object) throw new Error("Invalid variable type");
+                for (var ii in object.Variables) {
+                    if (!self.VARIABLES[ii]) {
+                        self.VARIABLES[ii] = object.Variables[ii];
+                    }
+                }
+                delete object.Variables;
+            }
+            resolve();
+        });
     };
+	
+	SONNY.Instance.prototype.rebuild = function() {
+		SONNY.Virtualiser.call(this);
+	};
 
     /**
      * Displays a hello message in the console
@@ -1308,6 +1355,23 @@
         } else {
             return false;
         }
+    };
+    
+    /**
+     * Add a page object to the pageInstances
+     * @param: url (string) : public/home
+     */
+    SONNY.AJAX = function(url, resolve) {
+        var request = new SONNY.GET();
+        request.onload = function() {
+            if (this.status === 200) {
+                resolve(this.responseText);
+            } else {
+                throw new Error("Status code was " + this.status);
+            }
+        };
+        request.open('GET', url + "?" + (new Date()).getTime(), true);
+        request.send(null);
     };
 
     if (window.SONNY) throw new Error("SonnyJS was already declared in this scope!");

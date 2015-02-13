@@ -1,0 +1,15 @@
+{
+  "Pages": [
+    "public/index.html",
+    "public/page1.html",
+    "public/page2.html",
+    "public/page3.html",
+    "public/header.html"
+  ],
+  "Settings": {
+	"language": "en",
+    "connection": false,
+    "connectionPort": 9005,
+    "displayNotifications": false
+  }
+}

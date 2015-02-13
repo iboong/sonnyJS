@@ -1,21 +1,13 @@
 (function() {
 
-    var SonnyPages = [
-        'public/index.html',
-        'public/page1.html',
-        'public/page2.html',
-        'public/page3.html',
-        'public/header.html',
-    ];
+    SONNY.PAGEPATH = "view/";
 
-    SonnyPages.Settings = {
-        pagecontainer: "syContainer"
-    }
+	SONNY.CONFIGPATH = "./config.json";
 
-    var instance = new SONNY.Instance(SonnyPages, function() {
+    var instance = new SONNY.Instance(function() {
         var renderer = new SONNY.Renderer(instance);
             renderer.render("public/index.html");
-        
+
         var diashowPages = ["public/page1.html", 
                             "public/page2.html", 
                             "public/page3.html"];
