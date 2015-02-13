@@ -352,13 +352,12 @@
             virtualPage.key = object.tagName.toLowerCase();
         if (object.hasAttribute) {
             if (virtualPage.key === SONNY.CONST.INCLUDE) {
-                for (var ii = 0, link = ""; ii < object.attributes.length;) {
-                    link += (ii > 0 ? "/" : "") + object.attributes[ii].name;
-                    if (++ii === object.attributes.length) {
-                        link = link.replace(/"/gi, "");
-                        virtualPage.page = link;
-                    }
-                }
+				for (var ii = 0; ii < object.attributes.length; ++ii) {
+					if (object.attributes[ii].nodeName === "page" || object.attributes[ii].localName === "page") {
+						virtualPage.page = object.attributes[ii].value || object.attributes[ii].value;
+					}
+				}
+
             } else if (virtualPage.key === "var") {
                 for (var ii = 0, link = ""; ii < object.attributes.length;) {
                     link += (ii > 0 ? "_" : "") + object.attributes[ii].name;
@@ -632,9 +631,9 @@
     SONNY.Renderer.prototype.get = function(page) {
 
         var self = this;
-    
+
         var data;
-    
+
         var _fetch = function(data) {
             if (self.__instance.PAGES[data]) return self.__instance.PAGES[data];
             else throw new Error("The page " + page + " does not exist or was not successfully loaded!");
