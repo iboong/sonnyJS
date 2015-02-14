@@ -4,9 +4,9 @@
 
 ### What is sonnyJS?
 
-SonnyJS is a minimalist single page application engine and HTML pre-processor, designed to help developers and designers to create incredibly strong and fast single page websites.
+SonnyJS is a minimalist single page application engine and HTML pre-processor, designed to help developers and designers create incredibly strong and fast single page websites.
 
-Sonny works very different than other single page engines, check it out to see how awesome it is.
+Sonny works very differently from other single page engines, check it out to see how awesome it is.
 
 Major features:
  - Template nesting, template inheritance
@@ -14,9 +14,9 @@ Major features:
  - Cross window communication (Share variables between windows)
  - History Manipulation (auto)
  - Dynamic HTML template variables
- - Multilanguage support
+ - Multi-language support
  - Global and Local Containers
- - Strong reduction of traffic since everything happens client sided after preloading
+ - Strong reduction of traffic since everything happens client side after preloading
 
 Missing features, found a bug, want to discuss?
 www.sonnyjs.org/forum
