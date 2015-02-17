@@ -860,7 +860,7 @@
 
         var self = this;
 
-        this.synchonize();
+        this.synchronize();
 
         this.StorageName = SONNY.STORAGE_EXT + "Instance::" + (new Date()).getTime();
 
@@ -909,7 +909,7 @@
             /**
              * Update local key from localstorage change
              */
-            self.synchonize();
+            self.synchronize();
         });
 
     };
@@ -974,7 +974,7 @@
     /**
      * Delete a specific global key from the storage
      */
-    SONNY.StorageManager.prototype.synchonize = function() {
+    SONNY.StorageManager.prototype.synchronize = function() {
         var storageObject = {};
         for (var ii in localStorage) {
             if (ii.match(SONNY.STORAGE_EXT) && !ii.match(SONNY.STORAGE_EXT + "Instance")) {
