@@ -1,0 +1,113 @@
+<app siteName="Yo">
+
+	<script>
+	document.title = 'Yo';
+  $('meta[name=description]').attr('content', 'description for Yo');
+  $('meta[name=keywords]').attr('content', 'keywords, new, value, Yo');
+	$('ul.nav a[SYLOAD="' + this.location.search.slice(1) + '"]').parent().addClass('active');
+	</script>
+
+		<div class="container main">
+			<div class="page-header">
+				<h1><span style="font-family: Montserrat,Futura;">Yo </span><small>Входящие</small></h1>
+			</div>
+			<p class="lead">Посмотрите Yo, которые получает акаунт <a href="//justyo.co/villagio" style="color: #9B59B6; font-family: Montserrat,Futura;">VILLAGIO</a>.</p>
+
+<link href="//fonts.googleapis.com/css?family=Montserrat:700,400" rel="stylesheet" type="text/css" />
+
+<style>
+a[href="undefined"],
+a[href="None"],
+a[href="//www.google.com/maps/search/undefined"],
+a[href="//www.google.com/maps/search/None"] {
+	display:none;
+}
+.yo-color-rows,
+.yo-color-rows a {
+	color: white;
+	font-family: Montserrat,Futura;
+	text-transform: uppercase;
+	text-decoration: none;
+	text-align: center;
+	font-size: 30px;
+	font-weight: 700;
+	margin: 0;
+	padding: 0;
+}
+.yo-color-rows div {
+padding: 10px;
+position: relative;
+}
+.yo-color-rows div:nth-child(8n+1) {
+	background-color: #8e44ad;
+}
+.yo-color-rows div:nth-child(8n+2) {
+	background-color: #2ecc71;
+}
+.yo-color-rows div:nth-child(8n+3) {
+	background-color: #1abc9c;
+}
+.yo-color-rows div:nth-child(8n+4) {
+	background-color: #3498db;
+}
+.yo-color-rows div:nth-child(8n+5) {
+	background-color: #34495e;
+}
+.yo-color-rows div:nth-child(8n+6) {
+	background-color: #16a085;
+}
+.yo-color-rows div:nth-child(8n+7) {
+	background-color: #f1c40f;
+}
+.yo-color-rows div:nth-child(8n+8) {
+	background-color: #2980b9;
+}
+	.yo-color-rows div:nth-child(8n+9) {
+		background-color: #e74c3c;
+}
+	.yo-color-rows div:nth-child(8n+10) {
+		background-color: #9B59B6;
+}
+</style>
+
+	<div class="yo-color-rows"></div>
+
+	<script id="yo-template" type="text/x-handlebars-template">
+		<div class="entry">
+			<span>{{username}}</span> just sent you yo
+			<a href="{{link}}">with a link <span class="glyphicon glyphicon-link" aria-hidden="true"></span></a>
+			<a href="//www.google.com/maps/search/{{p location}}">from there <span class="glyphicon glyphicon-map-marker" aria-hidden="true"></span></a>
+			</div>
+	</script>
+
+	<script type="text/javascript">
+		var public_spreadsheet_url = 'https://docs.google.com/spreadsheet/pub?hl=en_US&hl=en_US&key=1URKH83yLEJyiQJ5JXoucjZkdaaBrG8fZqY_x1f8wGME&output=html';
+
+		$(document).ready( function() {
+			Tabletop.init( { key: public_spreadsheet_url,
+											callback: showInfo,
+											parseNumbers: true,
+											prettyColumnNames: false,
+											orderby: 'timestamp',
+											reverse: true } );
+		});
+
+		function showInfo(data, tabletop) {
+			var source   = $("#yo-template").html();
+			var template = Handlebars.compile(source);
+
+			Handlebars.registerHelper('p', function(text) {
+	text = Handlebars.Utils.escapeExpression(text);
+	text = text.replace(';', ',');
+	return new Handlebars.SafeString(text);
+});
+
+			$.each( tabletop.sheets("Sheet1").all(), function(i, cat) {
+				var html = template(cat);
+				$(".yo-color-rows").append(html);
+			});
+		}
+		</script>
+		<INCLUDE page="footer"></INCLUDE>
+	</div>
+</app>

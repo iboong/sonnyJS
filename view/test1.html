@@ -1,0 +1,32 @@
+<app siteName="test1">
+
+  <script>
+  document.title = 'test1';
+  $('meta[name=description]').attr('content', 'description for test1');
+  $('meta[name=keywords]').attr('content', 'keywords, new, test1');
+  $('.nav a[SYLOAD="' + this.location.search.slice(1) + '"]').parent().addClass('active');
+  </script>
+
+    <div class="container main">
+
+      <h3><VAR %YOU_ARE_ON% ></VAR><VAR %LOGIN% ></VAR></h3>
+
+      <link rel="stylesheet" href="css/plusgallery.css">
+      <div id="plusgallery" data-userid="110649991944918076472" data-type="google" data-album-id="5936778302440596833"></div>
+      <script type="text/javascript">
+        $('#plusgallery').plusGallery();
+      </script>
+
+        <p>You are on test1.html </p>
+
+        <p><big>СРАНЫЙ ХУЙ</big><br>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Qui labore, quod? Laboriosam veritatis vel, dolorum quidem rem tempora dolorem necessitatibus vero laudantium libero nobis repudiandae ea eum quaerat obcaecati perspiciatis!</p>
+
+        <blockquote>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Commodi, incidunt veritatis omnis sequi sint, tenetur quas ea atque et id tempore molestias architecto, vitae perferendis quae rem laborum eaque voluptas.</blockquote>
+
+        <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Qui labore, quod? Laboriosam veritatis vel, dolorum quidem rem tempora dolorem necessitatibus vero laudantium libero nobis repudiandae ea eum quaerat obcaecati perspiciatis!</p>
+
+      <INCLUDE page="gallery"></INCLUDE>
+    <INCLUDE page="footer"></INCLUDE>
+  </div>
+
+</app>
