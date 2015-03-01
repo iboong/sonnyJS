@@ -4,7 +4,9 @@
   document.title = 'test1';
   $('meta[name=description]').attr('content', 'description for test1');
   $('meta[name=keywords]').attr('content', 'keywords, new, test1');
-  $('.nav a[SYLOAD="' + this.location.search.slice(1) + '"]').parent().addClass('active');
+  //$('.nav a[SYLOAD="' + this.location.search.slice(1) + '"]').parent().addClass('active');
+  var activeurl = window.location.search.slice(1);
+$('nav ul li a[syload="'+activeurl+'"]').parent('li').addClass('active');
   </script>
 
     <div class="container main">
