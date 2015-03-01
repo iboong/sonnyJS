@@ -5,8 +5,15 @@
   $('meta[name=description]').attr('content', 'description for test1');
   $('meta[name=keywords]').attr('content', 'keywords, new, test1');
   //$('.nav a[SYLOAD="' + this.location.search.slice(1) + '"]').parent().addClass('active');
-  var activeurl = window.location.search.slice(1);
-$('nav ul li a[syload="'+activeurl+'"]').parent('li').addClass('active');
+  //var activeurl = window.location.search.slice(1);
+  //$('nav ul li a[syload="'+activeurl+'"]').parent('li').addClass('active');
+  $(document).ready(function(){
+    $("nav ul li a").each(function(){
+        if($(this).attr("syload")==window.location.search.slice(1))
+            $(this).parent('li').addClass("active");
+    })
+})
+
   </script>
 
     <div class="container main">
